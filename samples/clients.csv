@@ -1,0 +1,11 @@
+ClientID,ClientName,PriorityLevel,RequestedTaskIDs,GroupTag,AttributesJSON
+C001,TechCorp Solutions,5,"T001,T003,T007",Enterprise,"{""budget"": 50000, ""deadline"": ""2024-06-30""}"
+C002,StartupFlow Inc,3,"T002,T004",Startup,"{""budget"": 15000, ""flexible"": true}"
+C003,GlobalTech Ltd,4,"T001,T005,T006",Enterprise,"{""budget"": 75000, ""priority_rush"": true}"
+C004,InnovateNow,2,"T008,T009",SMB,"{""budget"": 8000, ""part_time_ok"": true}"
+C005,DataDriven Co,5,"T003,T010,T011",Enterprise,"{""budget"": 100000, ""ai_focus"": true}"
+C006,WebCraft Studio,3,"T012,T013",Creative,"{""budget"": 25000, ""design_heavy"": true}"
+C007,CloudFirst Ltd,4,"T014,T015,T001",Enterprise,"{""budget"": 60000, ""cloud_native"": true}"
+C008,MobileMax,2,"T016,T017",Mobile,"{""budget"": 12000, ""ios_android"": true}"
+C009,EcommPlus,3,"T018,T019,T020",Ecommerce,"{""budget"": 30000, ""payment_integration"": true}"
+C010,HealthTech Pro,5,"T021,T022",Healthcare,"{""budget"": 80000, ""compliance_critical"": true}"

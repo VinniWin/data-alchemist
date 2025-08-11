@@ -1,0 +1,23 @@
+TaskID,TaskName,Category,Duration,RequiredSkills,PreferredPhases,MaxConcurrent
+T001,User Authentication System,Backend,2,"Python,Django","[1,2]",2
+T002,React Dashboard,Frontend,3,"JavaScript,React","[2,3,4]",1
+T003,API Gateway,Backend,2,"Java,Spring","[1,3]",2
+T004,Mobile App UI,Mobile,4,"JavaScript,React","[2,3,4,5]",1
+T005,Database Migration,Backend,1,"PostgreSQL,Python","[1]",1
+T006,Payment Integration,Backend,3,"Python,FastAPI","[3,4,5]",2
+T007,User Dashboard,Frontend,2,"React,TypeScript","[2,4]",1
+T008,Admin Panel,FullStack,3,"JavaScript,Node.js","[1,2,3]",1
+T009,Search Functionality,Backend,2,"Java,Elasticsearch","[3,4]",2
+T010,ML Model Deployment,AI,4,"Python,TensorFlow","[1,2,3,4]",1
+T011,Data Pipeline,Backend,3,"Python,Celery","[2,3,5]",1
+T012,Landing Page,Frontend,1,"React,CSS","[1]",2
+T013,Component Library,Frontend,3,"React,TypeScript","[2,3,4]",1
+T014,Microservice Architecture,Backend,4,"Java,Kubernetes","[1,2,3,4]",1
+T015,API Documentation,Documentation,2,"Markdown,Swagger","[4,5]",2
+T016,iOS App,Mobile,5,"Swift,iOS","[1,2,3,4,5]",1
+T017,Android App,Mobile,5,"Kotlin,Android","[1,2,3,4,5]",1
+T018,Shopping Cart,Ecommerce,3,"JavaScript,React","[2,3,4]",1
+T019,Checkout Process,Ecommerce,2,"Python,Stripe","[3,4]",1
+T020,Product Catalog,Ecommerce,2,"React,GraphQL","[2,3]",2
+T021,Patient Portal,Healthcare,4,"React,HIPAA","[1,2,3,4]",1
+T022,Medical Records,Healthcare,3,"Java,Security","[2,3,4]",1
