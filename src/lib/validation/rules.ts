@@ -826,19 +826,21 @@ export class ValidationEngine {
 
     return warnings;
   }
-
   private static validateWeightBasedConstraints(
     dataset: Data,
     weights: Priority
   ): ValidationError[] {
     const warnings: ValidationError[] = [];
 
-    // Example: If a task requires a skill, ensure the worker has that skill
+    const skillWeight = weights.skillMatching || 1;
+    const maxConcurrencyWeight = weights.workloadBalance || 1;
+
     dataset.tasks.forEach((task, taskIndex) => {
       task.RequiredSkills.forEach((skill: string) => {
         const workerWithSkill = dataset.workers.find((worker) =>
           worker.skills.includes(skill)
         );
+
         if (!workerWithSkill) {
           warnings.push({
             type: "skill_coverage_weight",
@@ -846,13 +848,12 @@ export class ValidationEngine {
             entity: "tasks",
             rowIndex: taskIndex,
             field: "RequiredSkills",
-            severity: "warning",
+            severity: skillWeight > 0.5 ? "error" : "warning",
           });
         }
       });
     });
 
-    // Example: If a task has a MaxConcurrent limit, ensure workers have enough slots
     dataset.tasks.forEach((task, taskIndex) => {
       const qualifiedWorkers = dataset.workers.filter((worker) =>
         task.RequiredSkills.every((skill: string) =>
@@ -860,14 +861,16 @@ export class ValidationEngine {
         )
       );
 
-      if (task.MaxConcurrent > qualifiedWorkers.length) {
+      const requiredWorkers = task.MaxConcurrent * maxConcurrencyWeight;
+
+      if (qualifiedWorkers.length < requiredWorkers) {
         warnings.push({
           type: "max_concurrency_weight",
           message: `Task ${task.taskId} has MaxConcurrent (${task.MaxConcurrent}) but only ${qualifiedWorkers.length} workers are qualified. This might affect allocation.`,
           entity: "tasks",
           rowIndex: taskIndex,
           field: "MaxConcurrent",
-          severity: "warning",
+          severity: maxConcurrencyWeight > 0.5 ? "error" : "warning",
         });
       }
     });
@@ -944,7 +947,11 @@ export class ValidationEngine {
     businessRules: any[],
     weights: Priority
   ): ValidationResult {
-    const baseValidation = this.validateDataSet(dataset, businessRules, weights);
+    const baseValidation = this.validateDataSet(
+      dataset,
+      businessRules,
+      weights
+    );
     const ruleBasedErrors: ValidationError[] = [];
     const weightBasedWarnings: ValidationError[] = [];
 
@@ -954,42 +961,60 @@ export class ValidationEngine {
       .forEach((rule) => {
         switch (rule.type) {
           case "coRun":
-            ruleBasedErrors.push(...this.validateCoRunEnforcement(dataset, rule));
+            ruleBasedErrors.push(
+              ...this.validateCoRunEnforcement(dataset, rule)
+            );
             break;
           case "loadLimit":
-            ruleBasedErrors.push(...this.validateLoadLimitEnforcement(dataset, rule));
+            ruleBasedErrors.push(
+              ...this.validateLoadLimitEnforcement(dataset, rule)
+            );
             break;
           case "phaseWindow":
-            ruleBasedErrors.push(...this.validatePhaseWindowEnforcement(dataset, rule));
+            ruleBasedErrors.push(
+              ...this.validatePhaseWindowEnforcement(dataset, rule)
+            );
             break;
           case "slotRestriction":
-            ruleBasedErrors.push(...this.validateSlotRestrictionEnforcement(dataset, rule));
+            ruleBasedErrors.push(
+              ...this.validateSlotRestrictionEnforcement(dataset, rule)
+            );
             break;
         }
       });
 
     // Apply weight-based validation logic
-    weightBasedWarnings.push(...this.validateWeightBasedAllocation(dataset, weights));
+    weightBasedWarnings.push(
+      ...this.validateWeightBasedAllocation(dataset, weights)
+    );
 
     return {
-      isValid: baseValidation.errors.length === 0 && ruleBasedErrors.length === 0,
+      isValid:
+        baseValidation.errors.length === 0 && ruleBasedErrors.length === 0,
       errors: [...baseValidation.errors, ...ruleBasedErrors],
       warnings: [...baseValidation.warnings, ...weightBasedWarnings],
     };
   }
 
-  private static validateCoRunEnforcement(dataset: Data, rule: any): ValidationError[] {
+  private static validateCoRunEnforcement(
+    dataset: Data,
+    rule: any
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     const tasks = rule.parameters.tasks || [];
 
     // Check if co-run tasks can actually be scheduled together
-    const ruleTasks = dataset.tasks.filter((t: any) => tasks.includes(t.taskId));
-    
+    const ruleTasks = dataset.tasks.filter((t: any) =>
+      tasks.includes(t.taskId)
+    );
+
     if (ruleTasks.length > 1) {
       // Check for common available phases
       const commonPhases = ruleTasks.reduce(
         (common, task) =>
-          common.filter((phase: number) => task.PreferredPhases.includes(phase)),
+          common.filter((phase: number) =>
+            task.PreferredPhases.includes(phase)
+          ),
         ruleTasks[0].PreferredPhases
       );
 
@@ -1003,10 +1028,15 @@ export class ValidationEngine {
       }
 
       // Check if enough workers are available for all tasks
-      const totalConcurrency = ruleTasks.reduce((sum, task) => sum + task.MaxConcurrent, 0);
+      const totalConcurrency = ruleTasks.reduce(
+        (sum, task) => sum + task.MaxConcurrent,
+        0
+      );
       const availableWorkers = dataset.workers.filter((worker) =>
         ruleTasks.some((task) =>
-          task.RequiredSkills.every((skill: string) => worker.skills.includes(skill))
+          task.RequiredSkills.every((skill: string) =>
+            worker.skills.includes(skill)
+          )
         )
       );
 
@@ -1023,15 +1053,20 @@ export class ValidationEngine {
     return errors;
   }
 
-  private static validateLoadLimitEnforcement(dataset: Data, rule: any): ValidationError[] {
+  private static validateLoadLimitEnforcement(
+    dataset: Data,
+    rule: any
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     const { workerGroup, maxSlotsPerPhase } = rule.parameters;
 
     if (!workerGroup || maxSlotsPerPhase === undefined) return errors;
 
     // Check if the rule is being violated by current data
-    const groupWorkers = dataset.workers.filter((w: any) => w.WorkerGroup === workerGroup);
-    
+    const groupWorkers = dataset.workers.filter(
+      (w: any) => w.WorkerGroup === workerGroup
+    );
+
     if (groupWorkers.length === 0) {
       errors.push({
         type: "load_limit_no_group",
@@ -1065,7 +1100,10 @@ export class ValidationEngine {
     return errors;
   }
 
-  private static validatePhaseWindowEnforcement(dataset: Data, rule: any): ValidationError[] {
+  private static validatePhaseWindowEnforcement(
+    dataset: Data,
+    rule: any
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     const { taskId, allowedPhases } = rule.parameters;
 
@@ -1083,11 +1121,17 @@ export class ValidationEngine {
     }
 
     // Check if task's preferred phases conflict with allowed phases
-    const conflictingPhases = task.PreferredPhases.filter((phase: number) => !allowedPhases.includes(phase));
+    const conflictingPhases = task.PreferredPhases.filter(
+      (phase: number) => !allowedPhases.includes(phase)
+    );
     if (conflictingPhases.length > 0) {
       errors.push({
         type: "phase_window_conflict",
-        message: `Phase window rule "${rule.name}" conflicts with task ${taskId} preferences: ${conflictingPhases.join(", ")} not allowed`,
+        message: `Phase window rule "${
+          rule.name
+        }" conflicts with task ${taskId} preferences: ${conflictingPhases.join(
+          ", "
+        )} not allowed`,
         entity: "tasks",
         severity: "error",
       });
@@ -1096,7 +1140,10 @@ export class ValidationEngine {
     return errors;
   }
 
-  private static validateSlotRestrictionEnforcement(dataset: Data, rule: any): ValidationError[] {
+  private static validateSlotRestrictionEnforcement(
+    dataset: Data,
+    rule: any
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Check slot restrictions per phase
@@ -1123,14 +1170,20 @@ export class ValidationEngine {
     return errors;
   }
 
-  private static validateWeightBasedAllocation(dataset: Data, weights: Priority): ValidationError[] {
+  private static validateWeightBasedAllocation(
+    dataset: Data,
+    weights: Priority
+  ): ValidationError[] {
     const warnings: ValidationError[] = [];
 
     // High priority level weight - check if high-priority clients have sufficient resources
     if (weights.priorityLevel > 30) {
-      const highPriorityClients = dataset.clients.filter((c: any) => c.PriorityLevel >= 4);
-      const totalHighPriorityTasks = highPriorityClients.reduce((sum, client) => 
-        sum + (client.RequestedTaskIDs?.length || 0), 0
+      const highPriorityClients = dataset.clients.filter(
+        (c: any) => c.PriorityLevel >= 4
+      );
+      const totalHighPriorityTasks = highPriorityClients.reduce(
+        (sum, client) => sum + (client.RequestedTaskIDs?.length || 0),
+        0
       );
 
       if (totalHighPriorityTasks > dataset.workers.length * 2) {
@@ -1145,11 +1198,14 @@ export class ValidationEngine {
 
     // High workload balance weight - check worker utilization
     if (weights.workloadBalance > 30) {
-      const totalWorkerSlots = dataset.workers.reduce((sum, worker) => 
-        sum + worker.AvailableSlots.length * worker.MaxLoadPerPhase, 0
+      const totalWorkerSlots = dataset.workers.reduce(
+        (sum, worker) =>
+          sum + worker.AvailableSlots.length * worker.MaxLoadPerPhase,
+        0
       );
-      const totalTaskDemand = dataset.tasks.reduce((sum, task) => 
-        sum + task.Duration * task.PreferredPhases.length, 0
+      const totalTaskDemand = dataset.tasks.reduce(
+        (sum, task) => sum + task.Duration * task.PreferredPhases.length,
+        0
       );
 
       if (totalTaskDemand > totalWorkerSlots * 0.8) {
@@ -1166,7 +1222,9 @@ export class ValidationEngine {
     if (weights.skillMatching > 30) {
       const allRequiredSkills = new Set<string>();
       dataset.tasks.forEach((task) => {
-        task.RequiredSkills.forEach((skill: string) => allRequiredSkills.add(skill));
+        task.RequiredSkills.forEach((skill: string) =>
+          allRequiredSkills.add(skill)
+        );
       });
 
       const coveredSkills = new Set<string>();
@@ -1174,11 +1232,17 @@ export class ValidationEngine {
         worker.skills.forEach((skill: string) => coveredSkills.add(skill));
       });
 
-      const uncoveredSkills = Array.from(allRequiredSkills).filter(skill => !coveredSkills.has(skill));
+      const uncoveredSkills = Array.from(allRequiredSkills).filter(
+        (skill) => !coveredSkills.has(skill)
+      );
       if (uncoveredSkills.length > 0) {
         warnings.push({
           type: "skill_matching_gaps",
-          message: `High skill matching weight (${weights.skillMatching}%) but ${uncoveredSkills.length} skills are uncovered: ${uncoveredSkills.join(", ")}`,
+          message: `High skill matching weight (${
+            weights.skillMatching
+          }%) but ${
+            uncoveredSkills.length
+          } skills are uncovered: ${uncoveredSkills.join(", ")}`,
           entity: "tasks",
           severity: "warning",
         });

@@ -223,12 +223,12 @@ export function WeightingSystem({
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2">High Priority Areas</h4>
-                <div className="space-y-2 text-sm text-blue-800">
+              <div className="p-4 bg-blue-50/20 rounded-lg">
+                <h4 className="font-semibold text-blue-300 mb-2">High Priority Areas</h4>
+                <div className="space-y-2 text-sm text-blue-200">
                   {Object.entries(weights)
-                    .filter(([_, weight]) => weight > 20)
-                    .sort(([_, a], [__, b]) => b - a)
+                    .filter(([, weight]) => weight > 20)
+                    .sort(([, a], [, b]) => b - a)
                     .map(([key, weight]) => (
                       <div key={key} className="flex justify-between">
                         <span>{CriteriaInfo[key as keyof typeof CriteriaInfo]?.name || key}</span>
@@ -238,9 +238,9 @@ export function WeightingSystem({
                 </div>
               </div>
               
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h4 className="font-semibold text-green-900 mb-2">Validation Impact</h4>
-                <div className="space-y-2 text-sm text-green-800">
+              <div className="p-4 bg-green-50/20 rounded-lg">
+                <h4 className="font-semibold text-green-300 mb-2">Validation Impact</h4>
+                <div className="space-y-2 text-sm text-green-200">
                   <div>• Priority Level: {weights.priorityLevel > 30 ? 'High impact on client satisfaction' : 'Balanced approach'}</div>
                   <div>• Workload Balance: {weights.workloadBalance > 30 ? 'Strict resource constraints' : 'Flexible allocation'}</div>
                   <div>• Skill Matching: {weights.skillMatching > 30 ? 'Quality-focused assignment' : 'Efficiency-focused'}</div>
@@ -249,9 +249,9 @@ export function WeightingSystem({
               </div>
             </div>
             
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <h4 className="font-semibold text-yellow-900 mb-2">System Behavior</h4>
-              <p className="text-sm text-yellow-800">
+            <div className="p-4 bg-yellow-50/20 rounded-lg">
+              <h4 className="font-semibold text-yellow-300 mb-2">System Behavior</h4>
+              <p className="text-sm text-yellow-200">
                 These weights now actively influence validation by checking for resource conflicts, 
                 skill coverage gaps, workload imbalances, and priority-based constraints. 
                 The system will show warnings when weight distributions may cause allocation issues.

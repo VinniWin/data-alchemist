@@ -45,7 +45,6 @@ export function FileUpload({
           `Successfully parsed ${parsedData.length} ${entityType} records`
         );
 
-        // Run validation with enhanced rule-based validation
         const updatedData = { ...original, [entityType]: parsedData };
 
         const validationResults = ValidationEngine.validateWithRules(
@@ -114,12 +113,12 @@ export function FileUpload({
             )}
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-300 mb-2">
                 Upload{" "}
                 {entityType.charAt(0).toUpperCase() + entityType.slice(1)} Data
               </h3>
               {uploadStatus === "idle" && (
-                <p className="text-gray-500">
+                <p className="text-gray-500  dark:text-slate-300">
                   {isDragActive
                     ? "Drop your CSV or Excel file here..."
                     : "Drag & drop your CSV or Excel file, or click to select"}

@@ -18,7 +18,7 @@ const entityConfig: {
   { key: "tasks", label: "Task", icon: <Sparkles className="w-4 h-4" /> },
 ];
 const DataGridSection = () => {
-  const { data, validation, rules, priority, setData, setValidation } =
+  const { data, validation, rules, priority, setData, hasData, setValidation } =
     useAppStore();
 
   const handleDataChange = (entityType: TEntity, savedData: any[]) => {
@@ -36,49 +36,51 @@ const DataGridSection = () => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="clients" className="space-y-6">
-        <TabsList className="w-full lg:w-fit self-center">
-          {entityConfig.map(({ key, label, icon }) => {
-            const errors = getEntityErrors(key);
+      {hasData() && (
+        <Tabs defaultValue="clients" className="space-y-6">
+          <TabsList className="w-full lg:w-fit self-center">
+            {entityConfig.map(({ key, label, icon }) => {
+              const errors = getEntityErrors(key);
+              return (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  className="flex items-center space-x-1"
+                >
+                  {icon}
+                  <span>{label}</span>
+                  {errors.length > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="ml-2 px-1.5 py-0 text-xs"
+                    >
+                      {errors.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {entityConfig.map(({ key }) => {
+            const entityData = data[key];
+            const entityErrors = getEntityErrors(key);
+
             return (
-              <TabsTrigger
-                key={key}
-                value={key}
-                className="flex items-center space-x-1"
-              >
-                {icon}
-                <span>{label}</span>
-                {errors.length > 0 && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-2 px-1.5 py-0 text-xs"
-                  >
-                    {errors.length}
-                  </Badge>
+              <TabsContent key={key} value={key} className="space-y-6">
+                {entityData.length > 0 && (
+                  <DataGrid
+                    data={entityData}
+                    entityType={key}
+                    onDataChange={(updated) => handleDataChange(key, updated)}
+                    errors={entityErrors}
+                  />
                 )}
-              </TabsTrigger>
+              </TabsContent>
             );
           })}
-        </TabsList>
-
-        {entityConfig.map(({ key }) => {
-          const entityData = data[key];
-          const entityErrors = getEntityErrors(key);
-
-          return (
-            <TabsContent key={key} value={key} className="space-y-6">
-              {entityData.length > 0 && (
-                <DataGrid
-                  data={entityData}
-                  entityType={key}
-                  onDataChange={(updated) => handleDataChange(key, updated)}
-                  errors={entityErrors}
-                />
-              )}
-            </TabsContent>
-          );
-        })}
-      </Tabs>
+        </Tabs>
+      )}
     </div>
   );
 };

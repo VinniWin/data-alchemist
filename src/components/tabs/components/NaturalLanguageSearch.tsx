@@ -39,9 +39,6 @@ export function NaturalLanguageSearch({
     setLastSearch(query);
 
     try {
-      // Simulate AI processing time
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const results = await SearchProcessor.processQuery(query, dataset);
       onSearchResults(results, results.entityType);
     } catch (error) {
@@ -117,11 +114,11 @@ export function NaturalLanguageSearch({
           </div>
         </div>
 
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold text-blue-900 mb-2">
+        <div className="p-4 bg-card border border-blue-100 rounded-lg">
+          <h4 className="font-semibold text-blue-300 mb-2">
             Natural Language Features:
           </h4>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <ul className="text-sm text-blue-200 space-y-1">
             <li>• Query across all data entities with plain English</li>
             <li>• Supports complex conditions and comparisons</li>
             <li>• Automatic entity type detection</li>

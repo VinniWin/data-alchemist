@@ -56,7 +56,7 @@ const TabsWithData = () => {
         )}
       </div>
 
-      <Tabs defaultValue="ingestion" className="space-y-6">
+      <Tabs defaultValue="ingestion" className="space-y-6 ">
         <MainTabNavigation />
 
         <TabsContent value="ingestion" className="space-y-6">

@@ -16,7 +16,7 @@ interface DataGridProps {
   onDataChange: (data: any[]) => void;
   errors?: any[];
   className?: string;
-  editableFields?: true | string[] | false; 
+  editableFields?: true | string[] | false;
 }
 
 export function DataGrid({
@@ -25,7 +25,7 @@ export function DataGrid({
   onDataChange,
   errors = [],
   className,
-  editableFields = true, 
+  editableFields = true,
 }: Readonly<DataGridProps>) {
   const [editingCell, setEditingCell] = useState<{
     row: number;
@@ -101,7 +101,7 @@ export function DataGrid({
   };
 
   const startEdit = (rowIndex: number, field: string) => {
-    if (!isFieldEditable(field)) return; 
+    if (!isFieldEditable(field)) return;
     const value = data[rowIndex][field];
     const column = getColumns().find((col) => col.key === field);
     setEditingCell({ row: rowIndex, field });
@@ -157,7 +157,7 @@ export function DataGrid({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="text-left capitalize p-3 font-semibold text-gray-700 bg-gray-50"
+                    className="text-left capitalize p-3 font-semibold text-gray-700 bg-card dark:text-slate-200"
                   >
                     {column.label}
                   </th>
@@ -168,7 +168,7 @@ export function DataGrid({
               {data.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
-                  className="border-b hover:bg-gray-50 transition-colors"
+                  className="border-b hover:bg-gray-50 dark:hover:bg-primary/5 transition-colors"
                 >
                   {columns.map((column) => {
                     const cellErrors = getCellErrors(rowIndex, column.key);
@@ -180,11 +180,11 @@ export function DataGrid({
                       <td
                         key={column.key}
                         className={`p-3 relative ${
-                          cellErrors.length > 0 ? "bg-red-50" : ""
+                          cellErrors.length > 0 ? "bg-card" : ""
                         }`}
                       >
                         {isEditing ? (
-                          <div className="flex items-center space-x-2">
+                          <div className="flex  items-center space-x-2">
                             <Input
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}

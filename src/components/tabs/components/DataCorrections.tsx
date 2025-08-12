@@ -67,6 +67,7 @@ export function DataCorrections({
       }
 
       const analysis: AIAnalysis = await response.json();
+      console.log({ analysis });
       setAiAnalysis(analysis);
       toast.success("AI analysis completed successfully!");
     } catch (error) {
@@ -125,10 +126,10 @@ export function DataCorrections({
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return "text-green-600 bg-green-50 border-green-200";
+    if (confidence >= 0.8) return "text-green-300 bg-green-50/20 border-green-200";
     if (confidence >= 0.6)
-      return "text-yellow-600 bg-yellow-50 border-yellow-200";
-    return "text-red-600 bg-red-50 border-red-200";
+      return "text-yellow-300 bg-yellow-50/20 border-yellow-200";
+    return "text-red-300 bg-red-50/20 border-red-200";
   };
 
   const getConfidenceLabel = (confidence: number) => {
@@ -149,7 +150,7 @@ export function DataCorrections({
             <Button
               onClick={generateAIAnalysis}
               disabled={isAnalyzing}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-slate-300"
             >
               {isAnalyzing ? (
                 <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2" />
@@ -164,20 +165,20 @@ export function DataCorrections({
           {!aiAnalysis && !isAnalyzing && (
             <div className="text-center py-8 text-gray-500">
               <Wand2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300 mb-2">
                 AI Analysis Ready
               </h3>
               <p>
-                Click "Analyze Data" to get intelligent suggestions for
-                improving your data quality.
+                Click &quot;Analyze Data&quot; to get intelligent suggestions
+                for improving your data quality.
               </p>
             </div>
           )}
 
           {isAnalyzing && (
             <div className="text-center py-8">
-              <div className="animate-spin w-16 h-16 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              <div className="animate-spin w-16 h-16 mx-auto mb-4 border-4 border-purple-200 border-t-purple-600 rounded-full " />
+              <h3 className="text-lg font-semibold dark:text-slate-300 text-gray-700 mb-2">
                 Analyzing Your Data
               </h3>
               <p className="text-gray-500">
@@ -190,7 +191,7 @@ export function DataCorrections({
           {aiAnalysis && (
             <div className="space-y-6">
               <div>
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                <h4 className="font-semibold text-gray-800 dark:text-slate-300 mb-3 flex items-center">
                   <Lightbulb className="w-4 h-4 mr-2 text-yellow-500" />
                   General Insights
                 </h4>
@@ -198,9 +199,9 @@ export function DataCorrections({
                   {aiAnalysis.suggestions.map((suggestion, index) => (
                     <div
                       key={index}
-                      className="p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                      className="p-3 bg-blue-50/20 border border-blue-200 rounded-lg"
                     >
-                      <p className="text-sm text-blue-800">{suggestion}</p>
+                      <p className="text-sm text-blue-300">{suggestion}</p>
                     </div>
                   ))}
                 </div>
@@ -208,12 +209,12 @@ export function DataCorrections({
 
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-gray-800 flex items-center">
+                  <h4 className="font-semibold text-gray-800 dark:text-slate-300 flex items-center">
                     <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
                     Suggested Corrections ({aiAnalysis.corrections.length})
                   </h4>
                   {aiAnalysis.corrections.length > 0 && (
-                    <Button size="sm" onClick={applyAllCorrections}>
+                    <Button size="sm" variant={'outline'} onClick={applyAllCorrections}>
                       Apply All
                     </Button>
                   )}
@@ -230,8 +231,8 @@ export function DataCorrections({
                           key={index}
                           className={`p-4 border rounded-lg ${
                             isApplied
-                              ? "bg-green-50 border-green-200"
-                              : "bg-white border-gray-200"
+                              ? "bg-green-50/5 border-green-200"
+                              : "bg-card border-gray-200"
                           }`}
                         >
                           <div className="flex items-start justify-between">
@@ -258,22 +259,22 @@ export function DataCorrections({
 
                               <div className="space-y-2">
                                 <div className="flex items-center space-x-2 text-sm">
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-slate-300">
                                     Current:
                                   </span>
-                                  <code className="bg-red-100 text-red-800 px-2 py-1 rounded">
+                                  <code className="bg-red-100/20 text-red-300 px-2 py-1 rounded">
                                     {JSON.stringify(correction.currentValue)}
                                   </code>
                                 </div>
                                 <div className="flex items-center space-x-2 text-sm">
-                                  <span className="text-gray-600">
+                                  <span className="text-gray-600 dark:text-slate-300">
                                     Suggested:
                                   </span>
-                                  <code className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                  <code className="bg-green-100/20 text-green-300 px-2 py-1 rounded">
                                     {JSON.stringify(correction.suggestedValue)}
                                   </code>
                                 </div>
-                                <p className="text-xs text-gray-600 mt-2">
+                                <p className="text-xs text-gray-600 mt-2 dark:text-slate-300">
                                   <strong>Reasoning:</strong>{" "}
                                   {correction.reasoning}
                                 </p>
@@ -282,7 +283,7 @@ export function DataCorrections({
 
                             <div className="ml-4">
                               {isApplied ? (
-                                <Badge className="bg-green-600">
+                                <Badge className="bg-green-600 dark:text-slate-100">
                                   <CheckCircle2 className="w-3 h-3 mr-1" />
                                   Applied
                                 </Badge>
@@ -306,7 +307,7 @@ export function DataCorrections({
               {/* Rule Recommendations */}
               {aiAnalysis.ruleRecommendations.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <h4 className="font-semibold text-gray-800 dark:text-slate-300 mb-3 flex items-center">
                     <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
                     Rule Recommendations
                   </h4>
@@ -315,7 +316,7 @@ export function DataCorrections({
                       (recommendation, index) => (
                         <div
                           key={index}
-                          className="p-4 bg-orange-50 border border-orange-200 rounded-lg"
+                          className="p-4 bg-orange-50/5 border border-orange-200 rounded-lg"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -334,7 +335,7 @@ export function DataCorrections({
                                   Confidence
                                 </Badge>
                               </div>
-                              <p className="text-sm text-orange-800 mb-2">
+                              <p className="text-sm text-orange-300 mb-2">
                                 {recommendation.description}
                               </p>
                               <p className="text-xs text-orange-600">

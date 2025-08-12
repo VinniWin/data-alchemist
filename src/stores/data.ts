@@ -30,7 +30,7 @@ interface StoreState {
   hasData: () => boolean;
 }
 
-export const useAppStore = create<StoreState>((set, get, s) => ({
+export const useAppStore = create<StoreState>((set, get) => ({
   data: {
     clients: [],
     workers: [],

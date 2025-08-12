@@ -176,7 +176,7 @@ export function RuleBuilder({
         return (
           <div className="space-y-4">
             <div>
-              <Label>Tasks to Co-Run</Label>
+              <Label className="mb-2">Tasks to Co-Run</Label>
               <Select
                 onValueChange={(value) => {
                   const tasks = activeRule.parameters?.tasks || [];
@@ -231,7 +231,7 @@ export function RuleBuilder({
         return (
           <div className="space-y-4">
             <div>
-              <Label>Worker Group</Label>
+              <Label className="mb-2">Worker Group</Label>
               <Select
                 onValueChange={(value) =>
                   setActiveRule({
@@ -258,7 +258,7 @@ export function RuleBuilder({
               </Select>
             </div>
             <div>
-              <Label>Max Slots Per Phase</Label>
+              <Label className="mb-2">Max Slots Per Phase</Label>
               <Input
                 type="number"
                 value={activeRule.parameters?.maxSlotsPerPhase || ""}
@@ -280,7 +280,7 @@ export function RuleBuilder({
         return (
           <div className="space-y-4">
             <div>
-              <Label>Task ID</Label>
+              <Label className="mb-2">Task ID</Label>
               <Select
                 onValueChange={(value) =>
                   setActiveRule({
@@ -327,7 +327,7 @@ export function RuleBuilder({
       default:
         return (
           <div>
-            <Label>Parameters (JSON)</Label>
+            <Label className="mb-2">Parameters (JSON)</Label>
             <Textarea
               placeholder='{"key": "value"}'
               value={JSON.stringify(activeRule.parameters || {}, null, 2)}
@@ -456,7 +456,7 @@ export function RuleBuilder({
 
           {/* Active Rule Editor */}
           {activeRule && (
-            <Card className="border-2 border-blue-200 bg-blue-50">
+            <Card className="border-2 ">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">
                   {RuleTypes.find((t) => t.value === activeRule.type)?.label ||
@@ -466,7 +466,7 @@ export function RuleBuilder({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Rule Name</Label>
+                    <Label className="mb-2">Rule Name</Label>
                     <Input
                       value={activeRule.name || ""}
                       onChange={(e) =>
@@ -476,7 +476,7 @@ export function RuleBuilder({
                     />
                   </div>
                   <div>
-                    <Label>Priority</Label>
+                    <Label className="mb-2">Priority</Label>
                     <Input
                       type="number"
                       value={activeRule.priority || 1}
@@ -493,7 +493,7 @@ export function RuleBuilder({
                 </div>
 
                 <div>
-                  <Label>Description</Label>
+                  <Label className="mb-2">Description</Label>
                   <Textarea
                     value={activeRule.description || ""}
                     onChange={(e) =>
@@ -529,7 +529,7 @@ export function RuleBuilder({
               {rules.map((rule) => (
                 <div
                   key={rule.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-gray-50/5 hover:bg-gray-50/10 rounded-lg"
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
@@ -576,8 +576,8 @@ export function RuleBuilder({
               <CardContent>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-semibold text-blue-900 mb-2">
+                    <div className="p-4 bg-blue-50/20 rounded-lg">
+                      <h4 className="font-semibold text-blue-300 mb-2">
                         Active Rules
                       </h4>
                       <div className="space-y-2">
@@ -588,7 +588,7 @@ export function RuleBuilder({
                               key={index}
                               className="flex items-center justify-between text-sm"
                             >
-                              <span className="text-blue-800">{rule.name}</span>
+                              <span className="text-blue-100">{rule.name}</span>
                               <Badge variant="outline" className="text-xs">
                                 {rule.type}
                               </Badge>
@@ -597,11 +597,11 @@ export function RuleBuilder({
                       </div>
                     </div>
 
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <h4 className="font-semibold text-green-900 mb-2">
+                    <div className="p-4 bg-green-50/20 rounded-lg">
+                      <h4 className="font-semibold text-green-300 mb-2">
                         System Impact
                       </h4>
-                      <div className="space-y-2 text-sm text-green-800">
+                      <div className="space-y-2 text-sm text-green-200">
                         <div>
                           • {rules.filter((r) => r.type === "coRun").length}{" "}
                           co-run constraints
@@ -627,11 +627,11 @@ export function RuleBuilder({
                     </div>
                   </div>
 
-                  <div className="p-4 bg-yellow-50 rounded-lg">
-                    <h4 className="font-semibold text-yellow-900 mb-2">
+                  <div className="p-4 bg-yellow-50/20 rounded-lg">
+                    <h4 className="font-semibold text-yellow-300 mb-2">
                       Validation Enhancement
                     </h4>
-                    <p className="text-sm text-yellow-800">
+                    <p className="text-sm text-yellow-200">
                       These business rules are now actively used in validation
                       to check for: rule violations, resource conflicts,
                       scheduling constraints, and allocation feasibility. The

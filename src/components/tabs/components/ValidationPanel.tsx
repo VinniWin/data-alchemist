@@ -62,7 +62,7 @@ export function ValidationPanel({
       </CardHeader>
       <CardContent>
         {isValid && errors.length === 0 && warnings.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 bg-card text-gray-500 dark:text-slate-300">
             <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
               All Clear!
@@ -71,11 +71,13 @@ export function ValidationPanel({
           </div>
         ) : (
           <ScrollArea className="h-96">
-            <div className="space-y-3">
+            <div className="space-y-3 ">
               {[...errors, ...warnings].map((issue, index) => (
                 <div
                   key={index}
-                  className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
+                  // className="flex items-start space-x-3 p-3 bg-card rounded-lg"
+                  className={`flex items-start space-x-3 p-3 bg-card rounded-lg border-2 border-dashed  border-gray-300 hover:border-primary hover:bg-primary/5
+                  `}
                 >
                   {getIcon(issue.severity)}
                   <div className="flex-1 min-w-0">
@@ -95,11 +97,13 @@ export function ValidationPanel({
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-700">{issue.message}</p>
+                    <p className="text-sm text-gray-700 dark:text-slate-300">
+                      {issue.message}
+                    </p>
                     {issue.field && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-slate-300 mt-1">
                         Field:{" "}
-                        <code className="bg-gray-200 px-1 rounded">
+                        <code className="border border-slate-300  bg-card px-1 rounded">
                           {issue.field}
                         </code>
                       </p>
@@ -111,14 +115,14 @@ export function ValidationPanel({
           </ScrollArea>
         )}
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <div className="mt-6 p-4 bg-card border border-blue-200 rounded-lg">
           <div className="flex items-start space-x-2">
             <Info className="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
-              <h4 className="font-semibold text-blue-900 mb-2">
+              <h4 className="font-semibold text-blue-300 mb-2">
                 Validation Summary
               </h4>
-              <div className="text-sm text-blue-800 space-y-1">
+              <div className="text-sm text-blue-200 space-y-1">
                 <p>
                   • <strong>{errors.length}</strong> critical errors that must
                   be fixed
