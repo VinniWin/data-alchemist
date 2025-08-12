@@ -39,13 +39,18 @@ export class ValidationEngine {
     errors.push(...this.validateSkillCoverage(dataset));
     warnings.push(...this.validateMaxConcurrencyFeasibility(dataset));
 
-    // Validate business rules
+    // Validate business rules with enhanced logic
     errors.push(...this.validateBusinessRules(dataset, businessRules));
 
-    // Validate prioritization weights
+    // Enhanced validation based on prioritization weights
     if (weights) {
       warnings.push(...this.validatePrioritizationWeights(weights));
+      // Add weight-based validation logic
+      warnings.push(...this.validateWeightBasedConstraints(dataset, weights));
     }
+
+    // Validate rule conflicts and dependencies
+    errors.push(...this.validateRuleConflicts(businessRules, dataset));
 
     return {
       isValid: errors.length === 0,
@@ -55,26 +60,29 @@ export class ValidationEngine {
   }
   private static normalizeField<T extends string | number>(
     value: any,
-    parser: (v: string) => T
+    parser: (v: string) => T,
+    allowRange: boolean = false
   ): T[] {
     if (Array.isArray(value)) {
-      return value.map(parser).filter((v) => v !== undefined && v !== null);
+      return value.flatMap((v) =>
+        this.parseValueWithRange(v, parser, allowRange)
+      );
     }
 
     if (typeof value === "string") {
       try {
         const parsed = JSON.parse(value);
         if (Array.isArray(parsed)) {
-          return parsed
-            .map(parser)
-            .filter((v) => v !== undefined && v !== null);
+          return parsed.flatMap((v) =>
+            this.parseValueWithRange(v, parser, allowRange)
+          );
         }
       } catch {
-        // Fall back to comma-separated
         return value
           .split(",")
-          .map((v: string) => parser(v.trim()))
-          .filter((v) => v !== undefined && v !== null);
+          .flatMap((v: string) =>
+            this.parseValueWithRange(v.trim(), parser, allowRange)
+          );
       }
     }
 
@@ -83,6 +91,28 @@ export class ValidationEngine {
     }
 
     return [];
+  }
+  private static parseValueWithRange<T extends string | number>(
+    val: any,
+    parser: (v: string) => T,
+    allowRange: boolean
+  ): T[] {
+    if (typeof val === "string" && allowRange && val.includes("-")) {
+      const [startStr, endStr] = val.split("-").map((s) => s.trim());
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+
+      if (!isNaN(start) && !isNaN(end) && start <= end) {
+        return Array.from({ length: end - start + 1 }, (_, i) =>
+          parser((start + i).toString())
+        );
+      }
+    }
+
+    const parsed = parser(val);
+    return parsed !== undefined && parsed !== null && !Number.isNaN(parsed)
+      ? [parsed]
+      : [];
   }
 
   private static normalizeDataset(dataset: Data): void {
@@ -102,7 +132,12 @@ export class ValidationEngine {
     });
 
     dataset.tasks.forEach((task) => {
-      task.PreferredPhases = this.normalizeField(task.PreferredPhases, Number);
+      task.PreferredPhases = this.normalizeField(
+        task.PreferredPhases,
+        Number,
+        true
+      );
+
       task.RequiredSkills = this.normalizeField(task.RequiredSkills, String);
     });
   }
@@ -787,6 +822,367 @@ export class ValidationEngine {
         field: "PriorityLevel",
         severity: "warning",
       });
+    }
+
+    return warnings;
+  }
+
+  private static validateWeightBasedConstraints(
+    dataset: Data,
+    weights: Priority
+  ): ValidationError[] {
+    const warnings: ValidationError[] = [];
+
+    // Example: If a task requires a skill, ensure the worker has that skill
+    dataset.tasks.forEach((task, taskIndex) => {
+      task.RequiredSkills.forEach((skill: string) => {
+        const workerWithSkill = dataset.workers.find((worker) =>
+          worker.skills.includes(skill)
+        );
+        if (!workerWithSkill) {
+          warnings.push({
+            type: "skill_coverage_weight",
+            message: `Task ${task.taskId} requires skill "${skill}" but no worker has it. This might affect allocation.`,
+            entity: "tasks",
+            rowIndex: taskIndex,
+            field: "RequiredSkills",
+            severity: "warning",
+          });
+        }
+      });
+    });
+
+    // Example: If a task has a MaxConcurrent limit, ensure workers have enough slots
+    dataset.tasks.forEach((task, taskIndex) => {
+      const qualifiedWorkers = dataset.workers.filter((worker) =>
+        task.RequiredSkills.every((skill: string) =>
+          worker.skills.includes(skill)
+        )
+      );
+
+      if (task.MaxConcurrent > qualifiedWorkers.length) {
+        warnings.push({
+          type: "max_concurrency_weight",
+          message: `Task ${task.taskId} has MaxConcurrent (${task.MaxConcurrent}) but only ${qualifiedWorkers.length} workers are qualified. This might affect allocation.`,
+          entity: "tasks",
+          rowIndex: taskIndex,
+          field: "MaxConcurrent",
+          severity: "warning",
+        });
+      }
+    });
+
+    return warnings;
+  }
+
+  private static validateRuleConflicts(
+    businessRules: any[],
+    dataset: Data
+  ): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const taskGroups = new Map<string, string[]>();
+    businessRules
+      .filter((rule) => rule.type === "coRun" && rule.active)
+      .forEach((rule) => {
+        const tasks = rule.parameters.tasks || [];
+        tasks.forEach((taskId: string) => {
+          if (!taskGroups.has(taskId)) {
+            taskGroups.set(taskId, []);
+          }
+          taskGroups.get(taskId)!.push(rule.name);
+        });
+      });
+
+    for (const [taskId, ruleNames] of taskGroups.entries()) {
+      if (ruleNames.length > 1) {
+        errors.push({
+          type: "rule_conflict",
+          message: `Task ${taskId} is in multiple co-run rules: ${ruleNames.join(
+            ", "
+          )}. This might lead to conflicting assignments.`,
+          entity: "tasks",
+          field: "taskId",
+          severity: "warning",
+        });
+      }
+    }
+
+    // Example: Check if any task is in multiple phase window rules
+    const taskPhaseWindows = new Map<string, string[]>();
+    businessRules
+      .filter((rule) => rule.type === "phaseWindow" && rule.active)
+      .forEach((rule) => {
+        const { taskId } = rule.parameters;
+        if (taskId) {
+          if (!taskPhaseWindows.has(taskId)) {
+            taskPhaseWindows.set(taskId, []);
+          }
+          taskPhaseWindows.get(taskId)!.push(rule.name);
+        }
+      });
+
+    for (const [taskId, ruleNames] of taskPhaseWindows.entries()) {
+      if (ruleNames.length > 1) {
+        errors.push({
+          type: "rule_conflict",
+          message: `Task ${taskId} is in multiple phase window rules: ${ruleNames.join(
+            ", "
+          )}. This might lead to conflicting assignments.`,
+          entity: "tasks",
+          field: "taskId",
+          severity: "warning",
+        });
+      }
+    }
+
+    return errors;
+  }
+
+  // Enhanced validation methods that actually use business rules and weights
+  static validateWithRules(
+    dataset: Data,
+    businessRules: any[],
+    weights: Priority
+  ): ValidationResult {
+    const baseValidation = this.validateDataSet(dataset, businessRules, weights);
+    const ruleBasedErrors: ValidationError[] = [];
+    const weightBasedWarnings: ValidationError[] = [];
+
+    // Apply business rules to actual validation
+    businessRules
+      .filter((rule) => rule.active)
+      .forEach((rule) => {
+        switch (rule.type) {
+          case "coRun":
+            ruleBasedErrors.push(...this.validateCoRunEnforcement(dataset, rule));
+            break;
+          case "loadLimit":
+            ruleBasedErrors.push(...this.validateLoadLimitEnforcement(dataset, rule));
+            break;
+          case "phaseWindow":
+            ruleBasedErrors.push(...this.validatePhaseWindowEnforcement(dataset, rule));
+            break;
+          case "slotRestriction":
+            ruleBasedErrors.push(...this.validateSlotRestrictionEnforcement(dataset, rule));
+            break;
+        }
+      });
+
+    // Apply weight-based validation logic
+    weightBasedWarnings.push(...this.validateWeightBasedAllocation(dataset, weights));
+
+    return {
+      isValid: baseValidation.errors.length === 0 && ruleBasedErrors.length === 0,
+      errors: [...baseValidation.errors, ...ruleBasedErrors],
+      warnings: [...baseValidation.warnings, ...weightBasedWarnings],
+    };
+  }
+
+  private static validateCoRunEnforcement(dataset: Data, rule: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const tasks = rule.parameters.tasks || [];
+
+    // Check if co-run tasks can actually be scheduled together
+    const ruleTasks = dataset.tasks.filter((t: any) => tasks.includes(t.taskId));
+    
+    if (ruleTasks.length > 1) {
+      // Check for common available phases
+      const commonPhases = ruleTasks.reduce(
+        (common, task) =>
+          common.filter((phase: number) => task.PreferredPhases.includes(phase)),
+        ruleTasks[0].PreferredPhases
+      );
+
+      if (commonPhases.length === 0) {
+        errors.push({
+          type: "corun_phase_conflict",
+          message: `Co-run rule "${rule.name}" cannot be satisfied - no common phases available`,
+          entity: "tasks",
+          severity: "error",
+        });
+      }
+
+      // Check if enough workers are available for all tasks
+      const totalConcurrency = ruleTasks.reduce((sum, task) => sum + task.MaxConcurrent, 0);
+      const availableWorkers = dataset.workers.filter((worker) =>
+        ruleTasks.some((task) =>
+          task.RequiredSkills.every((skill: string) => worker.skills.includes(skill))
+        )
+      );
+
+      if (availableWorkers.length < totalConcurrency) {
+        errors.push({
+          type: "corun_worker_insufficient",
+          message: `Co-run rule "${rule.name}" requires ${totalConcurrency} workers but only ${availableWorkers.length} are available`,
+          entity: "tasks",
+          severity: "error",
+        });
+      }
+    }
+
+    return errors;
+  }
+
+  private static validateLoadLimitEnforcement(dataset: Data, rule: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const { workerGroup, maxSlotsPerPhase } = rule.parameters;
+
+    if (!workerGroup || maxSlotsPerPhase === undefined) return errors;
+
+    // Check if the rule is being violated by current data
+    const groupWorkers = dataset.workers.filter((w: any) => w.WorkerGroup === workerGroup);
+    
+    if (groupWorkers.length === 0) {
+      errors.push({
+        type: "load_limit_no_group",
+        message: `Load limit rule "${rule.name}" references non-existent worker group: ${workerGroup}`,
+        entity: "workers",
+        severity: "error",
+      });
+      return errors;
+    }
+
+    // Calculate current load per phase for this group
+    const phaseLoads: Record<number, number> = {};
+    groupWorkers.forEach((worker) => {
+      worker.AvailableSlots.forEach((phase: number) => {
+        phaseLoads[phase] = (phaseLoads[phase] || 0) + worker.MaxLoadPerPhase;
+      });
+    });
+
+    // Check for violations
+    Object.entries(phaseLoads).forEach(([phase, load]) => {
+      if (load > maxSlotsPerPhase) {
+        errors.push({
+          type: "load_limit_violation",
+          message: `Load limit rule "${rule.name}" violated in phase ${phase}: ${load} > ${maxSlotsPerPhase}`,
+          entity: "workers",
+          severity: "error",
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private static validatePhaseWindowEnforcement(dataset: Data, rule: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const { taskId, allowedPhases } = rule.parameters;
+
+    if (!taskId || !Array.isArray(allowedPhases)) return errors;
+
+    const task = dataset.tasks.find((t: any) => t.taskId === taskId);
+    if (!task) {
+      errors.push({
+        type: "phase_window_no_task",
+        message: `Phase window rule "${rule.name}" references non-existent task: ${taskId}`,
+        entity: "tasks",
+        severity: "error",
+      });
+      return errors;
+    }
+
+    // Check if task's preferred phases conflict with allowed phases
+    const conflictingPhases = task.PreferredPhases.filter((phase: number) => !allowedPhases.includes(phase));
+    if (conflictingPhases.length > 0) {
+      errors.push({
+        type: "phase_window_conflict",
+        message: `Phase window rule "${rule.name}" conflicts with task ${taskId} preferences: ${conflictingPhases.join(", ")} not allowed`,
+        entity: "tasks",
+        severity: "error",
+      });
+    }
+
+    return errors;
+  }
+
+  private static validateSlotRestrictionEnforcement(dataset: Data, rule: any): ValidationError[] {
+    const errors: ValidationError[] = [];
+
+    // Check slot restrictions per phase
+    const phaseRestrictions: Record<number, number> = {};
+    dataset.tasks.forEach((task, taskIndex) => {
+      const duration = Number(task.Duration);
+      task.PreferredPhases.forEach((phase: number) => {
+        phaseRestrictions[phase] = (phaseRestrictions[phase] || 0) + duration;
+      });
+    });
+
+    // Apply rule constraints
+    Object.entries(phaseRestrictions).forEach(([phase, totalSlots]) => {
+      if (rule.maxTotalSlots && totalSlots > rule.maxTotalSlots) {
+        errors.push({
+          type: "slot_restriction_violation",
+          message: `Slot restriction rule violated in phase ${phase}: ${totalSlots} > ${rule.maxTotalSlots}`,
+          entity: "tasks",
+          severity: "error",
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private static validateWeightBasedAllocation(dataset: Data, weights: Priority): ValidationError[] {
+    const warnings: ValidationError[] = [];
+
+    // High priority level weight - check if high-priority clients have sufficient resources
+    if (weights.priorityLevel > 30) {
+      const highPriorityClients = dataset.clients.filter((c: any) => c.PriorityLevel >= 4);
+      const totalHighPriorityTasks = highPriorityClients.reduce((sum, client) => 
+        sum + (client.RequestedTaskIDs?.length || 0), 0
+      );
+
+      if (totalHighPriorityTasks > dataset.workers.length * 2) {
+        warnings.push({
+          type: "high_priority_overload",
+          message: `High priority weight (${weights.priorityLevel}%) may cause resource conflicts - ${totalHighPriorityTasks} high-priority tasks vs ${dataset.workers.length} workers`,
+          entity: "clients",
+          severity: "warning",
+        });
+      }
+    }
+
+    // High workload balance weight - check worker utilization
+    if (weights.workloadBalance > 30) {
+      const totalWorkerSlots = dataset.workers.reduce((sum, worker) => 
+        sum + worker.AvailableSlots.length * worker.MaxLoadPerPhase, 0
+      );
+      const totalTaskDemand = dataset.tasks.reduce((sum, task) => 
+        sum + task.Duration * task.PreferredPhases.length, 0
+      );
+
+      if (totalTaskDemand > totalWorkerSlots * 0.8) {
+        warnings.push({
+          type: "workload_balance_strain",
+          message: `High workload balance weight (${weights.workloadBalance}%) may strain resources - demand ${totalTaskDemand} vs capacity ${totalWorkerSlots}`,
+          entity: "workers",
+          severity: "warning",
+        });
+      }
+    }
+
+    // High skill matching weight - check skill coverage
+    if (weights.skillMatching > 30) {
+      const allRequiredSkills = new Set<string>();
+      dataset.tasks.forEach((task) => {
+        task.RequiredSkills.forEach((skill: string) => allRequiredSkills.add(skill));
+      });
+
+      const coveredSkills = new Set<string>();
+      dataset.workers.forEach((worker) => {
+        worker.skills.forEach((skill: string) => coveredSkills.add(skill));
+      });
+
+      const uncoveredSkills = Array.from(allRequiredSkills).filter(skill => !coveredSkills.has(skill));
+      if (uncoveredSkills.length > 0) {
+        warnings.push({
+          type: "skill_matching_gaps",
+          message: `High skill matching weight (${weights.skillMatching}%) but ${uncoveredSkills.length} skills are uncovered: ${uncoveredSkills.join(", ")}`,
+          entity: "tasks",
+          severity: "warning",
+        });
+      }
     }
 
     return warnings;

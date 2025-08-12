@@ -10,7 +10,7 @@ import { DataGrid } from "../components/DataGrid";
 import { NaturalLanguageSearch } from "../components/NaturalLanguageSearch";
 
 const AiSearchSection = () => {
-  const { data } = useAppStore();
+  const { data, hasData } = useAppStore();
   const [searchResults, setSearchResults] = useState<any>(null);
 
   const handleSearchResults = (results: any, entityType: string) => {
@@ -21,14 +21,10 @@ const AiSearchSection = () => {
     setSearchResults(null);
   };
 
-  const totalRecords =
-    data.clients.length + data.workers.length + data.tasks.length;
-  const hasData = totalRecords > 0;
-
   return (
     <>
       {" "}
-      {hasData ? (
+      {hasData() ? (
         <>
           <NaturalLanguageSearch
             dataset={data}

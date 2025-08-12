@@ -45,10 +45,10 @@ export function FileUpload({
           `Successfully parsed ${parsedData.length} ${entityType} records`
         );
 
-        // Run validation
+        // Run validation with enhanced rule-based validation
         const updatedData = { ...original, [entityType]: parsedData };
 
-        const validationResults = ValidationEngine.validateDataSet(
+        const validationResults = ValidationEngine.validateWithRules(
           updatedData as unknown as Data,
           rules,
           priority

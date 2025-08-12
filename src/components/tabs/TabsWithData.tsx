@@ -7,16 +7,18 @@ import { useAppStore } from "@/stores/data";
 import { Database, Download, Sparkles } from "lucide-react";
 import IngestionTab from "./components/IngestionTab";
 import MainTabNavigation from "./MainTabNavigation";
-import ValidationSection from "./sections/ValidationSection";
 import AiSearchSection from "./sections/AiSearchSection";
 import ExportSection from "./sections/ExportSection";
+import RulesSection from "./sections/RulesSection";
+import ValidationSection from "./sections/ValidationSection";
+import WeightSection from "./sections/WeightSection";
+import AiFixesSection from "./sections/AiFixesSection";
 
 const TabsWithData = () => {
-  const { data, validation } = useAppStore();
+  const { data, validation, hasData } = useAppStore();
 
   const totalRecords =
     data.clients.length + data.workers.length + data.tasks.length;
-  const hasData = totalRecords > 0;
   return (
     <>
       <div className="text-center space-y-4">
@@ -30,7 +32,7 @@ const TabsWithData = () => {
           AI-Enabled Resource Allocation Configurator - Transform spreadsheet
           chaos into clean, validated data with intelligent business rules
         </p>
-        {hasData && (
+        {hasData() && (
           <div className="flex items-center justify-center space-x-4">
             <Badge variant="outline" className="text-sm">
               <Database className="w-4 h-4 mr-1" />
@@ -44,7 +46,7 @@ const TabsWithData = () => {
                 ? "Validated ✓"
                 : `${validation.errors.length} errors`}
             </Badge>
-            {hasData && validation.isValid && (
+            {hasData() && validation.isValid && (
               <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
                 <Download className="w-4 h-4 mr-2" />
                 Export Configuration
@@ -71,6 +73,18 @@ const TabsWithData = () => {
 
         <TabsContent value="export" className="space-y-6">
           <ExportSection />
+        </TabsContent>
+
+        <TabsContent value="rules" className="space-y-6">
+          <RulesSection />
+        </TabsContent>
+
+        <TabsContent value="prioritization" className="space-y-6">
+          <WeightSection />
+        </TabsContent>
+
+        <TabsContent value="corrections" className="space-y-6">
+          <AiFixesSection />
         </TabsContent>
       </Tabs>
     </>

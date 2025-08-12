@@ -18,9 +18,10 @@ import {
 } from "@/utils/exportUtils";
 import { BarChart3, Download, FileText, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { DataExportCard } from "../components/DataExportCard";
 
 const ExportSection = () => {
-  const { data, rules, priority, validation } = useAppStore();
+  const { data, rules, priority, validation, hasData } = useAppStore();
 
   const handleExportCSV = async (type: TEntity) => {
     const csvData = data[type];
@@ -68,40 +69,6 @@ const ExportSection = () => {
     await exportRulesJSON(rulesConfig, "rules_config.json");
   };
 
-  const DataExportCard = ({
-    type,
-    title,
-    count,
-  }: {
-    type: TEntity;
-    title: string;
-    count: number;
-  }) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            <h3 className="font-medium">{title}</h3>
-          </div>
-          <Badge variant={count > 0 ? "secondary" : "outline"}>
-            {count} records
-          </Badge>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full bg-transparent"
-          onClick={() => handleExportCSV(type)}
-          disabled={count === 0}
-        >
-          <Download className="w-3 h-3 mr-2" />
-          Export CSV
-        </Button>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="space-y-6">
       <Card>
@@ -138,16 +105,19 @@ const ExportSection = () => {
           type="clients"
           title="Clients Data"
           count={data.clients.length}
+          handleExportCSV={handleExportCSV}
         />
         <DataExportCard
           type="workers"
           title="Workers Data"
           count={data.workers.length}
+          handleExportCSV={handleExportCSV}
         />
         <DataExportCard
           type="tasks"
           title="Tasks Data"
           count={data.tasks.length}
+          handleExportCSV={handleExportCSV}
         />
       </div>
 
@@ -167,7 +137,7 @@ const ExportSection = () => {
           <CardContent>
             <Button
               onClick={handleExportExcel}
-              disabled={validation.errors.length > 0||validation.isValid}
+              disabled={hasData() && validation.errors.length > 0}
               className="w-full"
             >
               <Download className="w-4 h-4 mr-2" />

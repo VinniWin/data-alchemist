@@ -1,18 +1,16 @@
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
-import { TabsContent } from "@/components/ui/tabs";
 import { useAppStore } from "@/stores/data";
 import { Settings } from "lucide-react";
-import { ValidationPanel } from "../components/ValidationPanel";
+import { WeightingSystem } from "../components/WeightingSystem";
 
-const ValidationSection = () => {
-  const { validation, hasData } = useAppStore();
+const WeightSection = () => {
+  const { priority, setPriority, hasData } = useAppStore();
 
   return (
     <div>
-      <TabsContent value="validation" className="space-y-6">
         {hasData() ? (
-          <ValidationPanel validation={validation} />
+          <WeightingSystem weights={priority} onWeightsChange={setPriority} />
         ) : (
           <Card>
             <CardContent className="text-center py-12">
@@ -26,9 +24,8 @@ const ValidationSection = () => {
             </CardContent>
           </Card>
         )}
-      </TabsContent>
     </div>
   );
 };
 
-export default ValidationSection;
+export default WeightSection;

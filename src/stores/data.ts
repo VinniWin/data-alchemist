@@ -9,10 +9,11 @@ export interface Data {
 
 export interface Priority {
   priorityLevel: number;
-  loadBalance: number;
-  deadline: number;
-  resourceAvailability: number;
-  taskComplexity: number;
+  taskFulfillment: number;
+  fairnessConstraints: number;
+  workloadBalance: number;
+  skillMatching: number;
+  phasePreference: number;
 }
 
 interface StoreState {
@@ -26,9 +27,10 @@ interface StoreState {
   setValidation: (validation: Partial<ValidationResult>) => void;
   setRules: (rules: any[]) => void;
   setPriority: (priority: Partial<Priority>) => void;
+  hasData: () => boolean;
 }
 
-export const useAppStore = create<StoreState>((set) => ({
+export const useAppStore = create<StoreState>((set, get, s) => ({
   data: {
     clients: [],
     workers: [],
@@ -41,11 +43,12 @@ export const useAppStore = create<StoreState>((set) => ({
   },
   rules: [],
   priority: {
-    priorityLevel: 70,
-    loadBalance: 30,
-    deadline: 50,
-    resourceAvailability: 40,
-    taskComplexity: 35,
+    priorityLevel: 20,
+    taskFulfillment: 20,
+    fairnessConstraints: 20,
+    workloadBalance: 20,
+    skillMatching: 20,
+    phasePreference: 0,
   },
 
   // Setters
@@ -62,4 +65,12 @@ export const useAppStore = create<StoreState>((set) => ({
     set((state) => ({
       priority: { ...state.priority, ...priority },
     })),
+  hasData: () => {
+    const state = get();
+    const totalRecords =
+      state.data.clients.length +
+      state.data.workers.length +
+      state.data.tasks.length;
+    return totalRecords > 0;
+  },
 }));

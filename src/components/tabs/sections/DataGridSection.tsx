@@ -23,7 +23,7 @@ const DataGridSection = () => {
 
   const handleDataChange = (entityType: TEntity, savedData: any[]) => {
     const updatedData = { ...data, [entityType]: savedData };
-    const validationResults = ValidationEngine.validateDataSet(
+    const validationResults = ValidationEngine.validateWithRules(
       updatedData,
       rules,
       priority
