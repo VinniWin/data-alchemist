@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TEntity } from "@/constants";
-import { ValidationEngine } from "@/lib/validation/rulesv2";
+import { ValidationEngine } from "@/lib/validation/rules";
 import { Data, useAppStore } from "@/stores/data";
 import { normalizeHeaders, parseFile } from "@/utils/fileParser";
 import { AlertCircle, CheckCircle2, FileText, Upload } from "lucide-react";

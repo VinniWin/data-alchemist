@@ -1,6 +1,20 @@
+import { TEntity } from "@/constants";
 import { Data, Priority } from "@/stores/data";
-import { ValidationError, ValidationResult } from "./rules";
 
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
+export interface ValidationError {
+  type: string;
+  message: string;
+  entity: TEntity;
+  rowIndex?: number;
+  field?: string;
+  severity: "error" | "warning";
+}
 export class ValidationEngine {
   static validateDataSet(
     dataset: Data,

@@ -2,7 +2,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TEntity } from "@/constants";
-import { ValidationEngine } from "@/lib/validation/rulesv2";
+import { ValidationEngine } from "@/lib/validation/rules";
 import { useAppStore } from "@/stores/data";
 import { Settings2, Sparkles, User2 } from "lucide-react";
 import { ReactNode } from "react";
