@@ -1,3 +1,4 @@
+import { TEntity } from "@/constants";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
@@ -44,10 +45,7 @@ export const parseFile = async (file: File): Promise<any[]> => {
   });
 };
 
-export const normalizeHeaders = (
-  data: any[],
-  type: "clients" | "workers" | "tasks"
-): any[] => {
+export const normalizeHeaders = (data: any[], type: TEntity): any[] => {
   if (!data || data.length === 0) return [];
 
   const headerMappings = {

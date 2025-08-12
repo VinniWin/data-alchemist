@@ -1,14 +1,12 @@
 "use client";
+import { TEntity } from "@/constants";
 import { useAppStore } from "@/stores/data";
 import { FileUpload } from "../components/FileUploader";
 
 const FileUploadSection = () => {
   const { data, setData } = useAppStore();
 
-  const handleDataParsed = (
-    entityType: "clients" | "workers" | "tasks",
-    data: any[]
-  ) => {
+  const handleDataParsed = (entityType: TEntity, data: any[]) => {
     setData({ [entityType]: data });
   };
 

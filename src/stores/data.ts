@@ -7,7 +7,7 @@ export interface Data {
   tasks: any[];
 }
 
-interface Priority {
+export interface Priority {
   priorityLevel: number;
   loadBalance: number;
   deadline: number;

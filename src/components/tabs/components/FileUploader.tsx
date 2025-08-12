@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ValidationEngine } from "@/lib/validation/rules";
+import { TEntity } from "@/constants";
+import { ValidationEngine } from "@/lib/validation/rulesv2";
 import { Data, useAppStore } from "@/stores/data";
 import { normalizeHeaders, parseFile } from "@/utils/fileParser";
 import { AlertCircle, CheckCircle2, FileText, Upload } from "lucide-react";
@@ -11,7 +12,7 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 
 interface FileUploadProps {
-  entityType: "clients" | "workers" | "tasks";
+  entityType: TEntity;
   onDataParsed: (data: any[]) => void;
   className?: string;
 }
@@ -24,7 +25,7 @@ export function FileUpload({
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "processing" | "success" | "error"
   >("idle");
-  const { data: original, setValidation } = useAppStore();
+  const { data: original, rules, priority, setValidation } = useAppStore();
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -48,12 +49,14 @@ export function FileUpload({
         const updatedData = { ...original, [entityType]: parsedData };
 
         const validationResults = ValidationEngine.validateDataSet(
-          updatedData as unknown as Data
+          updatedData as unknown as Data,
+          rules,
+          priority
         );
         setValidation(validationResults);
         onDataParsed(parsedData);
       } catch (error) {
-        let errmsg = `Error parsing file: ${
+        const errmsg = `Error parsing file: ${
           error instanceof Error ? error.message : "Unknown error"
         }`;
         setUploadStatus("error");

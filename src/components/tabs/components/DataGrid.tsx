@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Edit2, Save, X, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Tooltipmsg from "../../ui/tooltipmsg";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { TEntity } from "@/constants";
 import { ValidationError } from "@/lib/validation/rules";
+import { AlertTriangle, Edit2, Save, X } from "lucide-react";
+import { useState } from "react";
+import Tooltipmsg from "../../ui/tooltipmsg";
 
 interface DataGridProps {
   data: any[];
-  entityType: "clients" | "workers" | "tasks";
+  entityType: TEntity;
   onDataChange: (data: any[]) => void;
   errors?: any[];
   className?: string;
+  editableFields?: true | string[] | false; 
 }
 
 export function DataGrid({
@@ -23,6 +25,7 @@ export function DataGrid({
   onDataChange,
   errors = [],
   className,
+  editableFields = true, 
 }: Readonly<DataGridProps>) {
   const [editingCell, setEditingCell] = useState<{
     row: number;
@@ -49,7 +52,7 @@ export function DataGrid({
 
       return {
         key,
-        label: key.replace(/([A-Z])/g, " $1").trim(), // Optional: make the label readable
+        label: key.replace(/([A-Z])/g, " $1").trim(),
         type,
       };
     });
@@ -87,7 +90,18 @@ export function DataGrid({
         return value;
     }
   };
+
+  const isFieldEditable = (field: string): boolean => {
+    if (editableFields === true) return true; // all editable
+    if (editableFields === false) return false; // none editable
+    if (Array.isArray(editableFields)) {
+      return editableFields.includes(field);
+    }
+    return false;
+  };
+
   const startEdit = (rowIndex: number, field: string) => {
+    if (!isFieldEditable(field)) return; 
     const value = data[rowIndex][field];
     const column = getColumns().find((col) => col.key === field);
     setEditingCell({ row: rowIndex, field });
@@ -114,8 +128,11 @@ export function DataGrid({
     setEditValue("");
   };
 
-  const getCellError = (rowIndex: number, field: string): ValidationError => {
-    return errors.find(
+  const getCellErrors = (
+    rowIndex: number,
+    field: string
+  ): ValidationError[] => {
+    return errors.filter(
       (error) => error.rowIndex === rowIndex && error.field === field
     );
   };
@@ -154,7 +171,7 @@ export function DataGrid({
                   className="border-b hover:bg-gray-50 transition-colors"
                 >
                   {columns.map((column) => {
-                    const cellError = getCellError(rowIndex, column.key);
+                    const cellErrors = getCellErrors(rowIndex, column.key);
                     const isEditing =
                       editingCell?.row === rowIndex &&
                       editingCell?.field === column.key;
@@ -163,7 +180,7 @@ export function DataGrid({
                       <td
                         key={column.key}
                         className={`p-3 relative ${
-                          cellError ? "bg-red-50" : ""
+                          cellErrors.length > 0 ? "bg-red-50" : ""
                         }`}
                       >
                         {isEditing ? (
@@ -195,24 +212,32 @@ export function DataGrid({
                           </div>
                         ) : (
                           <div
-                            className="group cursor-pointer flex items-center space-x-2 min-h-[32px]"
+                            className={`group cursor-pointer flex items-center space-x-2 min-h-[32px] ${
+                              !isFieldEditable(column.key)
+                                ? "cursor-default opacity-60"
+                                : ""
+                            }`}
                             onClick={() => startEdit(rowIndex, column.key)}
                           >
                             <span className="flex-1">
                               {formatValue(row[column.key], column.type)}
                             </span>
-                            <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity" />
-                            {cellError && (
-                              <div className="flex items-center">
-                                <Tooltipmsg msg={cellError.message}>
-                                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                                </Tooltipmsg>
+                            {isFieldEditable(column.key) && (
+                              <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+                            )}
+                            {cellErrors.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                {cellErrors.map((err, idx) => (
+                                  <Tooltipmsg key={idx} msg={err.message}>
+                                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                                  </Tooltipmsg>
+                                ))}
                               </div>
                             )}
                           </div>
                         )}
 
-                        {cellError && (
+                        {cellErrors.length > 0 && (
                           <div className="absolute top-0 left-0 w-full h-full pointer-events-none border-2 border-red-500 rounded" />
                         )}
                       </td>

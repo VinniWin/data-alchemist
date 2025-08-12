@@ -3,38 +3,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ValidationEngine } from "@/lib/validation/rules";
-import { Data, useAppStore } from "@/stores/data";
-import {
-  Database,
-  Download,
-  Sparkles
-} from "lucide-react";
-import TabNavigation from "./TabNavigation";
+import { useAppStore } from "@/stores/data";
+import { Database, Download, Sparkles } from "lucide-react";
 import IngestionTab from "./components/IngestionTab";
+import MainTabNavigation from "./MainTabNavigation";
+import ValidationSection from "./sections/ValidationSection";
+import AiSearchSection from "./sections/AiSearchSection";
+import ExportSection from "./sections/ExportSection";
 
 const TabsWithData = () => {
-  const { data, validation, setData, setValidation } = useAppStore();
-
-  const handleDataParsed = (
-    entityType: "clients" | "workers" | "tasks",
-    data: any[]
-  ) => {
-    setData({ [entityType]: data });
-  };
-
-  const handleDataChange = (
-    entityType: "clients" | "workers" | "tasks",
-    saveddata: any[]
-  ) => {
-    const updatedData = { ...data, [entityType]: saveddata };
-
-    const validationResults = ValidationEngine.validateDataSet(
-      updatedData as unknown as Data
-    );
-    setValidation(validationResults);
-    setData({ [entityType]: saveddata });
-  };
+  const { data, validation } = useAppStore();
 
   const totalRecords =
     data.clients.length + data.workers.length + data.tasks.length;
@@ -77,10 +55,22 @@ const TabsWithData = () => {
       </div>
 
       <Tabs defaultValue="ingestion" className="space-y-6">
-        <TabNavigation />
+        <MainTabNavigation />
 
         <TabsContent value="ingestion" className="space-y-6">
           <IngestionTab />
+        </TabsContent>
+
+        <TabsContent value="validation" className="space-y-6">
+          <ValidationSection />
+        </TabsContent>
+
+        <TabsContent value="search" className="space-y-6">
+          <AiSearchSection />
+        </TabsContent>
+
+        <TabsContent value="export" className="space-y-6">
+          <ExportSection />
         </TabsContent>
       </Tabs>
     </>

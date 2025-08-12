@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const { dataset, validation } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       You are a data quality assistant.
