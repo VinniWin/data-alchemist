@@ -16,7 +16,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { RuleTypes } from "@/constants";
-import { NLPProcessor } from "@/lib/ai/nlp";
 import { validateRule } from "@/lib/utils";
 import { Data } from "@/stores/data";
 import { Lightbulb, Save, Settings, Trash2, Zap } from "lucide-react";

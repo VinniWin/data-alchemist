@@ -381,11 +381,11 @@ export class ValidationEngine {
     // Build task groups from co-run rules
     coRunRules.forEach((rule) => {
       const tasks = rule.parameters.tasks || [];
-      tasks.forEach((taskId) => {
+      tasks.forEach((taskId: any) => {
         if (!taskGroups.has(taskId)) {
           taskGroups.set(taskId, []);
         }
-        taskGroups.get(taskId)!.push(...tasks.filter((t) => t !== taskId));
+        taskGroups.get(taskId)!.push(...tasks.filter((t: any) => t !== taskId));
       });
     });
 
@@ -500,11 +500,11 @@ export class ValidationEngine {
 
     const availableSkills = new Set<string>();
     dataset.workers.forEach((worker) => {
-      worker.skills.forEach((skill) => availableSkills.add(skill));
+      worker.skills.forEach((skill: any) => availableSkills.add(skill));
     });
 
     dataset.tasks.forEach((task, index) => {
-      task.RequiredSkills.forEach((skill) => {
+      task.RequiredSkills.forEach((skill: any) => {
         if (!availableSkills.has(skill)) {
           errors.push({
             type: "skill_coverage",
@@ -528,7 +528,7 @@ export class ValidationEngine {
 
     dataset.tasks.forEach((task, index) => {
       const qualifiedWorkers = dataset.workers.filter((worker) =>
-        task.RequiredSkills.every((skill) => worker.skills.includes(skill))
+        task.RequiredSkills.every((skill: any) => worker.skills.includes(skill))
       );
 
       if (task.MaxConcurrent > qualifiedWorkers.length) {
@@ -583,7 +583,7 @@ export class ValidationEngine {
 
     // Check if all tasks in co-run rule exist
     const existingTaskIds = new Set(dataset.tasks.map((t) => t.taskId));
-    tasks.forEach((taskId) => {
+    tasks.forEach((taskId: any) => {
       if (!existingTaskIds.has(taskId)) {
         errors.push({
           type: "invalid_corun_task",
@@ -600,7 +600,7 @@ export class ValidationEngine {
     if (ruleTasks.length > 1) {
       const commonPhases = ruleTasks.reduce(
         (common, task) =>
-          common.filter((phase) => task.PreferredPhases.includes(phase)),
+          common.filter((phase: any) => task.PreferredPhases.includes(phase)),
         ruleTasks[0].PreferredPhases
       );
 
@@ -728,15 +728,8 @@ export class ValidationEngine {
   ): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    // For example, let's assume the rule looks like this:
-    // { phase: number, maxSlotsPerWorker: number, maxTotalSlots: number }
-
-    // Assuming rule contains phase, maxSlotsPerWorker, and maxTotalSlots constraints
-
-    // Validate per-worker slot restriction per phase
     dataset.workers.forEach((worker, workerIndex) => {
-      worker.AvailableSlots.forEach((phase) => {
-        // Check if the worker exceeds the maxSlotsPerWorker for a given phase
+      worker.AvailableSlots.forEach((phase: any) => {
         if (
           rule.maxSlotsPerWorker &&
           worker.MaxLoadPerPhase > rule.maxSlotsPerWorker
@@ -753,15 +746,12 @@ export class ValidationEngine {
       });
     });
 
-    // Validate total slot usage for each phase
-    const phaseTotalSlots: Record<number, number> = {}; // phase -> total slots assigned
+    const phaseTotalSlots: Record<number, number> = {};
     dataset.tasks.forEach((task, taskIndex) => {
       const taskDuration = Number(task.Duration);
 
-      task.PreferredPhases.forEach((phase) => {
-        // Calculate the total slots being used in the phase by all tasks
+      task.PreferredPhases.forEach((phase: any) => {
         phaseTotalSlots[phase] = (phaseTotalSlots[phase] || 0) + taskDuration;
-
         // Check if the total slots in the phase exceed the maximum allowed for the phase
         if (rule.maxTotalSlots && phaseTotalSlots[phase] > rule.maxTotalSlots) {
           errors.push({
@@ -1059,39 +1049,31 @@ export class ValidationEngine {
 
     if (!workerGroup || maxSlotsPerPhase === undefined) return errors;
 
-    // Create a set of workerIds for quick lookup
+    const groupWorkers = dataset.workers.filter(
+      (w) => w.GroupID === workerGroup
+    );
+
+    if (groupWorkers.length === 0) return errors;
+
     const workerIdsSet = new Set(groupWorkers.map((w) => w.workerId));
 
-    // Accumulate load per phase for the group
     const loadPerPhase: Record<number, number> = {};
 
-    // Iterate tasks to calculate load contributed by assigned workers in group
-    dataset.tasks.forEach((task) => {
-      // Assuming `AssignedWorkerIDs` is an array of workers assigned to this task
-      if (!task.AssignedWorkerIDs || task.AssignedWorkerIDs.length === 0)
-        return;
+    for (const task of dataset.tasks) {
+      if (!task.AssignedWorkerIDs?.length) continue;
 
-      // Filter assigned workers to those in this group
       const assignedGroupWorkers = task.AssignedWorkerIDs.filter(
         (wid: string) => workerIdsSet.has(wid)
       );
 
-      if (assignedGroupWorkers.length === 0) return; // no group workers assigned here
+      if (assignedGroupWorkers.length === 0) continue;
 
-      // Distribute task load among assigned group workers
-      const loadPerWorker = task.Duration / assignedGroupWorkers.length;
+      for (const phase of task.PreferredPhases || []) {
+        loadPerPhase[phase] = (loadPerPhase[phase] || 0) + task.Duration;
+      }
+    }
 
-      // Add load for each phase task runs in
-      task.PreferredPhases.forEach((phase: number) => {
-        loadPerPhase[phase] =
-          (loadPerPhase[phase] || 0) +
-          loadPerWorker * assignedGroupWorkers.length;
-        // or just: loadPerPhase[phase] += task.Duration if you want full task load counted once
-      });
-    });
-
-    // Check if any phase exceeds maxSlotsPerPhase
-    Object.entries(loadPerPhase).forEach(([phaseStr, totalLoad]) => {
+    for (const [phaseStr, totalLoad] of Object.entries(loadPerPhase)) {
       const phase = Number(phaseStr);
       if (totalLoad > maxSlotsPerPhase) {
         errors.push({
@@ -1105,7 +1087,7 @@ export class ValidationEngine {
           severity: "error",
         });
       }
-    });
+    }
 
     return errors;
   }
