@@ -9,6 +9,7 @@ import { ValidationError } from "@/lib/validation/rules";
 import { AlertTriangle, Edit2, Save, X } from "lucide-react";
 import { useState } from "react";
 import Tooltipmsg from "../../ui/tooltipmsg";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface DataGridProps {
   data: any[];
@@ -248,6 +249,23 @@ export function DataGrid({
             </tbody>
           </table>
         </div>
+        {errors.length > 0 && (
+          <ScrollArea className="mt-4 h-96 overflow-x-auto rounded-md border p-4">
+            <div className="mt-4 space-y-2">
+              <h4 className="text-sm font-medium text-red-700">
+                Validation Errors:
+              </h4>
+              {errors.map((error, i) => (
+                <div
+                  key={i}
+                  className="text-sm text-red-300 bg-red-50/20 p-2 rounded"
+                >
+                  <strong>{error?.severity}</strong>: {error.message}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
       </CardContent>
     </Card>
   );

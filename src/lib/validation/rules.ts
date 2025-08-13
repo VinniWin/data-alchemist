@@ -449,8 +449,8 @@ export class ValidationEngine {
 
     const phaseCapacity: Record<number, number> = {};
     const phaseDemand: Record<number, number> = {};
-    const phaseToTaskRows: Record<number, number[]> = {}; // phase -> contributing task row indices
-    // Calculate phase capacity
+    const phaseToTaskRows: Record<number, number[]> = {};
+
     for (const worker of dataset.workers) {
       for (const phase of worker.AvailableSlots) {
         const load = Number(worker.MaxLoadPerPhase);
@@ -479,10 +479,7 @@ export class ValidationEngine {
       if (demand > capacity) {
         const contributingTasks = phaseToTaskRows[phase] || [];
 
-        // Optional: limit to first few rows to avoid flooding
-        const rowsToReport = contributingTasks.slice(0, 5); // Limit to 5 for readability
-
-        for (const rowIndex of rowsToReport) {
+        for (const rowIndex of contributingTasks) {
           errors.push({
             type: "phase_saturation",
             message: `Phase ${phase} demand (${demand.toLocaleString()}) exceeds capacity (${capacity.toLocaleString()})`,
@@ -1062,35 +1059,48 @@ export class ValidationEngine {
 
     if (!workerGroup || maxSlotsPerPhase === undefined) return errors;
 
-    // Check if the rule is being violated by current data
-    const groupWorkers = dataset.workers.filter(
-      (w: any) => w.WorkerGroup === workerGroup
-    );
+    // Create a set of workerIds for quick lookup
+    const workerIdsSet = new Set(groupWorkers.map((w) => w.workerId));
 
-    if (groupWorkers.length === 0) {
-      errors.push({
-        type: "load_limit_no_group",
-        message: `Load limit rule "${rule.name}" references non-existent worker group: ${workerGroup}`,
-        entity: "workers",
-        severity: "error",
-      });
-      return errors;
-    }
+    // Accumulate load per phase for the group
+    const loadPerPhase: Record<number, number> = {};
 
-    // Calculate current load per phase for this group
-    const phaseLoads: Record<number, number> = {};
-    groupWorkers.forEach((worker) => {
-      worker.AvailableSlots.forEach((phase: number) => {
-        phaseLoads[phase] = (phaseLoads[phase] || 0) + worker.MaxLoadPerPhase;
+    // Iterate tasks to calculate load contributed by assigned workers in group
+    dataset.tasks.forEach((task) => {
+      // Assuming `AssignedWorkerIDs` is an array of workers assigned to this task
+      if (!task.AssignedWorkerIDs || task.AssignedWorkerIDs.length === 0)
+        return;
+
+      // Filter assigned workers to those in this group
+      const assignedGroupWorkers = task.AssignedWorkerIDs.filter(
+        (wid: string) => workerIdsSet.has(wid)
+      );
+
+      if (assignedGroupWorkers.length === 0) return; // no group workers assigned here
+
+      // Distribute task load among assigned group workers
+      const loadPerWorker = task.Duration / assignedGroupWorkers.length;
+
+      // Add load for each phase task runs in
+      task.PreferredPhases.forEach((phase: number) => {
+        loadPerPhase[phase] =
+          (loadPerPhase[phase] || 0) +
+          loadPerWorker * assignedGroupWorkers.length;
+        // or just: loadPerPhase[phase] += task.Duration if you want full task load counted once
       });
     });
 
-    // Check for violations
-    Object.entries(phaseLoads).forEach(([phase, load]) => {
-      if (load > maxSlotsPerPhase) {
+    // Check if any phase exceeds maxSlotsPerPhase
+    Object.entries(loadPerPhase).forEach(([phaseStr, totalLoad]) => {
+      const phase = Number(phaseStr);
+      if (totalLoad > maxSlotsPerPhase) {
         errors.push({
           type: "load_limit_violation",
-          message: `Load limit rule "${rule.name}" violated in phase ${phase}: ${load} > ${maxSlotsPerPhase}`,
+          message: `Load limit rule "${
+            rule.name
+          }" violated in phase ${phase}: ${totalLoad.toFixed(
+            2
+          )} > ${maxSlotsPerPhase}`,
           entity: "workers",
           severity: "error",
         });

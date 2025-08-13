@@ -65,7 +65,6 @@ const DataGridSection = () => {
           {entityConfig.map(({ key }) => {
             const entityData = data[key];
             const entityErrors = getEntityErrors(key);
-
             return (
               <TabsContent key={key} value={key} className="space-y-6">
                 {entityData.length > 0 && (

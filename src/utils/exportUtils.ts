@@ -2,15 +2,16 @@ import * as XLSX from "xlsx";
 
 export const exportToCSV = async (data: any[], filename: string) => {
   if (!data || data.length === 0) return;
-
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(","),
     ...data.map((row) =>
       headers
         .map((header) => {
-          const value = row[header] || "";
-          // Escape commas and quotes
+          let value = row[header] || "";
+          if (Array.isArray(value)) {
+            value = value.join(",");
+          }
           return typeof value === "string" &&
             (value.includes(",") || value.includes('"'))
             ? `"${value.replace(/"/g, '""')}"`
@@ -31,6 +32,19 @@ export const exportToCSV = async (data: any[], filename: string) => {
   document.body.removeChild(link);
 };
 
+function prepareDataForExcel(data: any[]) {
+  return data.map((row) => {
+    const newRow: any = {};
+    Object.entries(row).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        newRow[key] = value.join(",");
+      } else {
+        newRow[key] = value;
+      }
+    });
+    return newRow;
+  });
+}
 export const exportToExcel = async (
   data: { clients: any[]; workers: any[]; tasks: any[] },
   filename: string
@@ -39,19 +53,25 @@ export const exportToExcel = async (
 
   // Add clients sheet
   if (data.clients.length > 0) {
-    const clientsSheet = XLSX.utils.json_to_sheet(data.clients);
+    const clientsSheet = XLSX.utils.json_to_sheet(
+      prepareDataForExcel(data.clients)
+    );
     XLSX.utils.book_append_sheet(workbook, clientsSheet, "Clients");
   }
 
   // Add workers sheet
   if (data.workers.length > 0) {
-    const workersSheet = XLSX.utils.json_to_sheet(data.workers);
+    const workersSheet = XLSX.utils.json_to_sheet(
+      prepareDataForExcel(data.workers)
+    );
     XLSX.utils.book_append_sheet(workbook, workersSheet, "Workers");
   }
 
   // Add tasks sheet
   if (data.tasks.length > 0) {
-    const tasksSheet = XLSX.utils.json_to_sheet(data.tasks);
+    const tasksSheet = XLSX.utils.json_to_sheet(
+      prepareDataForExcel(data.tasks)
+    );
     XLSX.utils.book_append_sheet(workbook, tasksSheet, "Tasks");
   }
 

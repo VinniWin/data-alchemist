@@ -13,10 +13,31 @@ import RulesSection from "./sections/RulesSection";
 import ValidationSection from "./sections/ValidationSection";
 import WeightSection from "./sections/WeightSection";
 import AiFixesSection from "./sections/AiFixesSection";
+import { toast } from "sonner";
+import { exportToExcel } from "@/utils/exportUtils";
 
 const TabsWithData = () => {
   const { data, validation, hasData } = useAppStore();
 
+  const handleExportExcel = async () => {
+    const hasData =
+      data.clients.length > 0 ||
+      data.workers.length > 0 ||
+      data.tasks.length > 0;
+    if (!hasData) {
+      toast.error("No data to export");
+      return;
+    }
+
+    await exportToExcel(
+      {
+        clients: data.clients,
+        workers: data.workers,
+        tasks: data.tasks,
+      },
+      "cleaned_data.xlsx"
+    );
+  };
   const totalRecords =
     data.clients.length + data.workers.length + data.tasks.length;
   return (
@@ -28,7 +49,7 @@ const TabsWithData = () => {
             Data Alchemist
           </h1>
         </div>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+        <p className="text-xl text-gray-600 dark:text-slate-200 max-w-3xl mx-auto">
           AI-Enabled Resource Allocation Configurator - Transform spreadsheet
           chaos into clean, validated data with intelligent business rules
         </p>
@@ -47,7 +68,10 @@ const TabsWithData = () => {
                 : `${validation.errors.length} errors`}
             </Badge>
             {hasData() && validation.isValid && (
-              <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+              <Button
+                onClick={handleExportExcel}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Export Configuration
               </Button>

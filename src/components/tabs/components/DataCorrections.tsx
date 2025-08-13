@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ValidationResult } from "@/lib/validation/rules";
 import { Data } from "@/stores/data";
-import { AlertTriangle, CheckCircle2, Lightbulb, Wand2 } from "lucide-react";
+import { CheckCircle2, Lightbulb, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -67,8 +67,8 @@ export function DataCorrections({
       }
 
       const analysis: AIAnalysis = await response.json();
-      console.log({ analysis });
       setAiAnalysis(analysis);
+      setAppliedCorrections(new Set());
       toast.success("AI analysis completed successfully!");
     } catch (error) {
       console.error(error);
@@ -126,7 +126,8 @@ export function DataCorrections({
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return "text-green-300 bg-green-50/20 border-green-200";
+    if (confidence >= 0.8)
+      return "text-green-300 bg-green-50/20 border-green-200";
     if (confidence >= 0.6)
       return "text-yellow-300 bg-yellow-50/20 border-yellow-200";
     return "text-red-300 bg-red-50/20 border-red-200";
@@ -214,7 +215,11 @@ export function DataCorrections({
                     Suggested Corrections ({aiAnalysis.corrections.length})
                   </h4>
                   {aiAnalysis.corrections.length > 0 && (
-                    <Button size="sm" variant={'outline'} onClick={applyAllCorrections}>
+                    <Button
+                      size="sm"
+                      variant={"outline"}
+                      onClick={applyAllCorrections}
+                    >
                       Apply All
                     </Button>
                   )}
@@ -303,56 +308,6 @@ export function DataCorrections({
                   </div>
                 </ScrollArea>
               </div>
-
-              {/* Rule Recommendations */}
-              {aiAnalysis.ruleRecommendations.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-gray-800 dark:text-slate-300 mb-3 flex items-center">
-                    <AlertTriangle className="w-4 h-4 mr-2 text-orange-500" />
-                    Rule Recommendations
-                  </h4>
-                  <div className="space-y-3">
-                    {aiAnalysis.ruleRecommendations.map(
-                      (recommendation, index) => (
-                        <div
-                          key={index}
-                          className="p-4 bg-orange-50/5 border border-orange-200 rounded-lg"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Badge variant="outline">
-                                  {recommendation.type}
-                                </Badge>
-                                <Badge
-                                  className={`text-xs ${getConfidenceColor(
-                                    recommendation.confidence
-                                  )}`}
-                                >
-                                  {getConfidenceLabel(
-                                    recommendation.confidence
-                                  )}{" "}
-                                  Confidence
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-orange-300 mb-2">
-                                {recommendation.description}
-                              </p>
-                              <p className="text-xs text-orange-600">
-                                <strong>Reasoning:</strong>{" "}
-                                {recommendation.reasoning}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="outline">
-                              Create Rule
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </CardContent>

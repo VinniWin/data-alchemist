@@ -33,7 +33,7 @@ const AiFixesSection = () => {
         <Card>
           <CardContent className="text-center py-12">
             <Wand2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+            <h3 className="text-lg font-semibold dark:text-slate-200 text-gray-700 mb-2">
               No Data to Analyze
             </h3>
             <p className="text-gray-500">

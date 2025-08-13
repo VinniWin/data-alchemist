@@ -1,60 +1,46 @@
 import { TEntity } from "@/constants";
 import { Data } from "@/stores/data";
+import { filterDatasetByEntity } from "@/utils/filters";
+
+type NLPResponseItem = {
+  entityType: TEntity;
+  filters: { field: string; operator: any; value: any }[];
+};
 
 export class NLPProcessor {
   static async processQuery(
     query: string,
     dataset: Data
   ): Promise<{
-    results: any[];
-    entityType: TEntity;
+    results: Record<TEntity, any[]>;
     totalFound: number;
   }> {
-    // 1. Pre-process only to decide what entity to send (optional — or send all)
-    const normalizedQuery = query.toLowerCase();
-    let entityType: TEntity = "tasks";
-
-    if (
-      normalizedQuery.includes("client") ||
-      normalizedQuery.includes("customer")
-    ) {
-      entityType = "clients";
-    } else if (
-      normalizedQuery.includes("worker") ||
-      normalizedQuery.includes("employee")
-    ) {
-      entityType = "workers";
-    }
-
-    // 2. Slice only the necessary part of the dataset to reduce size
-    const slicedDataset: Data = {
-      clients: dataset.clients.slice(0, 100), // send only sample
-      workers: dataset.workers.slice(0, 100),
-      tasks: dataset.tasks.slice(0, 100),
-    };
-
-    // 3. Send to your Gemini-powered API
     const res = await fetch("/api/query", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        dataset: slicedDataset,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
     });
 
-    if (!res.ok) {
-      throw new Error("Failed to process query through Gemini");
-    }
+    if (!res.ok) throw new Error("Failed to process query through Gemini");
 
-    const data = await res.json();
+    const aiResults: NLPResponseItem[] = await res.json();
 
+    const output: Record<TEntity, any[]> = {
+      clients: [],
+      workers: [],
+      tasks: [],
+    };
+
+    let total = 0;
+    aiResults.forEach(({ entityType, filters }) => {
+      const filtered = filterDatasetByEntity(dataset, entityType, filters);
+      output[entityType] = filtered;
+      
+      total += filtered.length;
+    });
     return {
-      results: data.results || [],
-      entityType: data.entityType || entityType,
-      totalFound: data.totalFound || 0,
+      results: output,
+      totalFound: total,
     };
   }
 }

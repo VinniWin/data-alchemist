@@ -1,44 +1,79 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export async function POST(req: Request) {
   try {
-    const { query, dataset } = await req.json();
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const { query } = await req.json();
 
     const prompt = `
-You are a natural language query assistant for a structured dataset.
+You are an AI that converts a natural language query into a strict JSON filter format.
 
-The dataset has 3 entity types:
-- "clients"
-- "workers"
-- "tasks"
-
-Based on the user's query below, analyze and:
-1. Detect the correct entity type
-2. Filter the correct data items using relevant fields
-3. Consider possible misspellings (e.g., "taks" instead of "tasks") and interpret them correctly.
-4. Return ONLY valid JSON in this format:
-
-interface QueryAnalysis {
-  entityType: "clients" | "workers" | "tasks";
-  results: any[];
-  totalFound: number;
+ENTITY TYPES AND SCHEMAS (exact field names to use):
+{
+  "clients": {
+    "clientId": "string",
+    "ClientName": "string",
+    "PriorityLevel": "number",
+    "RequestedTaskIDs": "string[]",
+    "GroupTag": "string",
+    "AttributesJSON": "object"
+  },
+  "workers": {
+    "workerId": "string",
+    "WorkerName": "string",
+    "skills": "string[]",
+    "AvailableSlots": "number",
+    "MaxLoadPerPhase": "number",
+    "WorkerGroup": "string",
+    "QualificationLevel": "number"
+  },
+  "tasks": {
+    "taskId": "string",
+    "TaskName": "string",
+    "Category": "string",
+    "Duration": "number",
+    "RequiredSkills": "string[]",
+    "PreferredPhases": "string[]",
+    "MaxConcurrent": "number"
+  }
 }
 
-User Query:
+OUTPUT JSON FORMAT (exactly this):
+[{
+  "entityType": "clients" | "workers" | "tasks",
+  "filters": [
+    {
+      "field": "<exact_field_name_from_schema>",
+      "operator": ">" | "<" | "=" | "includes",
+      "value": "<string_or_number>"
+    }
+  ]
+}]
+
+RULES:
+1. Only output valid JSON, no explanations or markdown.
+2. Field names MUST match exactly from the schema above (case-sensitive).
+3. Operators: 
+   - "=" for exact match
+   - "includes" for partial match or array contains
+   - ">" / "<" for numeric comparison
+4. Values: If number is expected, return as number. Strings without quotes inside numbers.
+5. Never invent fields or entity types not in schema.
+6. If the query is ambiguous, pick the most likely entity type.
+
+USER QUERY:
 "${query}"
+`;
 
-Dataset:
-${JSON.stringify(dataset)}
-    `;
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text();
-
-    // Remove ```json fences if present
+    let text = result.candidates?.[0].content?.parts?.[0].text || "{}";
     text = text.replace(/```json\s*|```/g, "").trim();
 
     let parsed;

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export async function POST(req: Request) {
   try {
     const { dataset, validation } = await req.json();
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       You are a data quality assistant.
@@ -25,13 +25,6 @@ export async function POST(req: Request) {
           confidence: number;
           reasoning: string;
         }[];
-        ruleRecommendations: {
-          type: string;
-          description: string;
-          parameters: Record<string, any>;
-          confidence: number;
-          reasoning: string;
-        }[];
       }
 
       Dataset:
@@ -41,8 +34,11 @@ export async function POST(req: Request) {
       ${JSON.stringify(validation)}
     `;
 
-    const result = await model.generateContent(prompt);
-    let text = result.response.text();
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: prompt,
+    });
+    let text = result.candidates?.[0].content?.parts?.[0].text || "{}";
 
     // Remove Markdown code fences if present
     text = text.replace(/```json\s*|```/g, "").trim();

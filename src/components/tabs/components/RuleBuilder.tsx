@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -16,9 +17,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { RuleTypes } from "@/constants";
 import { NLPProcessor } from "@/lib/ai/nlp";
+import { validateRule } from "@/lib/utils";
 import { Data } from "@/stores/data";
 import { Lightbulb, Save, Settings, Trash2, Zap } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface RuleBuilderProps {
   dataset: Data;
@@ -81,27 +84,21 @@ export function RuleBuilder({
 
   const processNaturalLanguage = async () => {
     if (!naturalLanguageInput.trim()) return;
-
-    setIsProcessingNL(true);
     try {
-      // Simulate AI processing
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      const suggestion = NLPProcessor.generateRuleFromNaturalLanguage(
-        naturalLanguageInput,
-        dataset
-      );
-      if (suggestion) {
-        setAiSuggestions([suggestion]);
-      }
+      await generateAIRecommendations(naturalLanguageInput);
     } catch (error) {
-      console.error("Error processing natural language:", error);
-    } finally {
-      setIsProcessingNL(false);
+      console.error(error);
+      toast.error("Error while creating rule");
     }
   };
 
   const acceptAISuggestion = (suggestion: any) => {
+    const error = validateRule(suggestion, dataset);
+    if (error) {
+      toast.error(`AI suggestion invalid: ${error}`);
+      return;
+    }
+
     setActiveRule({
       id: `rule_${Date.now()}`,
       type: suggestion.type,
@@ -111,61 +108,44 @@ export function RuleBuilder({
       priority: 1,
       active: true,
     });
-    setAiSuggestions([]);
+
+    setAiSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
     setNaturalLanguageInput("");
+
+    toast.success(`✅ AI suggestion "${suggestion.name}" accepted`);
   };
 
-  const generateAIRecommendations = () => {
-    // Simulate AI pattern detection
-    const recommendations: any[] = [];
+  const generateAIRecommendations = async (prompt?: string) => {
+    setIsProcessingNL(true);
+    try {
+      const res = await fetch("/api/generate-rule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataset,
+          prompt:
+            prompt ??
+            "Suggest me some of the 4 to 5 rules after analyzing data",
+        }),
+      });
 
-    // Check for potential co-run patterns
-    const taskGroups = new Map<string, string[]>();
-    dataset.clients.forEach((client) => {
-      const key = client.RequestedTaskIDs.sort().join(",");
-      if (!taskGroups.has(key)) taskGroups.set(key, []);
-      taskGroups.get(key)!.push(client.ClientID);
-    });
+      const data = await res.json();
 
-    taskGroups.forEach((clients, tasks) => {
-      if (clients.length > 1 && tasks.split(",").length > 1) {
-        recommendations.push({
-          type: "coRun",
-          name: `Co-run Tasks: ${tasks}`,
-          description: `Tasks ${tasks} are frequently requested together by ${clients.length} clients`,
-          parameters: { tasks: tasks.split(",") },
-          confidence: 0.8,
-          reasoning: `Pattern detected: ${clients.length} clients request these tasks together`,
-        });
+      if (!res.ok || data.error) {
+        toast.error(data.error || "Failed to generate suggestion");
+        return;
       }
-    });
-
-    const groupLoads = new Map<string, number>();
-    dataset.workers.forEach((worker) => {
-      const load = worker.AvailableSlots.length * worker.MaxLoadPerPhase;
-      groupLoads.set(
-        worker.WorkerGroup,
-        (groupLoads.get(worker.WorkerGroup) || 0) + load
-      );
-    });
-
-    groupLoads.forEach((load, group) => {
-      if (load > 20) {
-        recommendations.push({
-          type: "loadLimit",
-          name: `Load Limit: ${group}`,
-          description: `${group} workers may be overloaded (total capacity: ${load})`,
-          parameters: {
-            workerGroup: group,
-            maxSlotsPerPhase: Math.floor(load * 0.8),
-          },
-          confidence: 0.7,
-          reasoning: `High capacity detected for ${group} group`,
-        });
+      if (data.suggestion) {
+        setAiSuggestions(data.suggestion);
+        toast.info(
+          `Generated a ${data.suggestion.type} rule: ${data.suggestion.name}`
+        );
       }
-    });
-
-    setAiSuggestions(recommendations);
+    } catch (error) {
+      console.error("Error processing natural language:", error);
+    } finally {
+      setIsProcessingNL(false);
+    }
   };
 
   const renderRuleParameters = () => {
@@ -330,7 +310,6 @@ export function RuleBuilder({
             <Label className="mb-2">Parameters (JSON)</Label>
             <Textarea
               placeholder='{"key": "value"}'
-              value={JSON.stringify(activeRule.parameters || {}, null, 2)}
               onChange={(e) => {
                 try {
                   const params = JSON.parse(e.target.value);
@@ -378,45 +357,47 @@ export function RuleBuilder({
           </div>
 
           {aiSuggestions.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm">AI Suggestions:</h4>
-              {aiSuggestions.map((suggestion, index) => (
-                <div
-                  key={index}
-                  className="p-4 bg-blue-50 border border-blue-200 rounded-lg"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h5 className="font-semibold text-blue-900">
-                        {suggestion.name}
-                      </h5>
-                      <p className="text-sm text-blue-800 mt-1">
-                        {suggestion.description}
-                      </p>
-                      {suggestion.reasoning && (
-                        <p className="text-xs text-blue-600 mt-2">
-                          <strong>Reasoning:</strong> {suggestion.reasoning}
+            <ScrollArea className="mt-4 h-96 overflow-x-auto rounded-md border p-4">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">AI Suggestions:</h4>
+                {aiSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-blue-50/20 border border-blue-200 rounded-lg"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h5 className="font-semibold text-blue-300">
+                          {suggestion.name}
+                        </h5>
+                        <p className="text-sm text-blue-200 mt-1">
+                          {suggestion.description}
                         </p>
-                      )}
-                      <Badge variant="outline" className="mt-2">
-                        Confidence: {Math.round(suggestion.confidence * 100)}%
-                      </Badge>
+                        {suggestion.reasoning && (
+                          <p className="text-xs text-blue-100 mt-2">
+                            <strong>Reasoning:</strong> {suggestion.reasoning}
+                          </p>
+                        )}
+                        <Badge variant="outline" className="mt-2">
+                          Confidence: {Math.round(suggestion.confidence * 100)}%
+                        </Badge>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => acceptAISuggestion(suggestion)}
+                      >
+                        Accept
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => acceptAISuggestion(suggestion)}
-                    >
-                      Accept
-                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </ScrollArea>
           )}
 
           <Button
             variant="outline"
-            onClick={generateAIRecommendations}
+            onClick={() => generateAIRecommendations()}
             className="w-full"
           >
             <Lightbulb className="w-4 h-4 mr-2" />
